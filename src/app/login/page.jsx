@@ -1,10 +1,13 @@
 "use client";
 
+import { useState } from "react";
 import { motion } from "framer-motion";
-import { User, Lock } from "lucide-react";
+import { User, Lock, Eye, EyeOff } from "lucide-react";
 import Link from "next/link";
 
 export default function LoginPage() {
+  const [showPassword, setShowPassword] = useState(false);
+
   return (
     <main className="min-h-screen grid lg:grid-cols-2 bg-gray-100">
 
@@ -80,10 +83,22 @@ export default function LoginPage() {
                 />
 
                 <input
-                  type="password"
+                  type={showPassword ? "text" : "password"}
                   placeholder="Enter password"
-                  className="w-full h-14 pl-12 pr-4 rounded-2xl border border-gray-200 bg-gray-50 focus:ring-2 focus:ring-red-500 outline-none"
+                  className="h-14 w-full rounded-2xl border border-gray-200 bg-gray-50 pl-12 pr-12 outline-none transition focus:border-red-500 focus:ring-2 focus:ring-red-500"
                 />
+
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 transition hover:text-red-600"
+                >
+                  {showPassword ? (
+                    <EyeOff size={20} />
+                  ) : (
+                    <Eye size={20} />
+                  )}
+                </button>
 
               </div>
 
@@ -99,12 +114,11 @@ export default function LoginPage() {
                 />
 
                 Remember me
-
               </label>
 
               <Link
-                href="#"
-                className="text-red-600 hover:underline"
+                href="/forgot-password"
+                className="font-medium text-red-600 transition hover:text-red-700 hover:underline"
               >
                 Forgot Password?
               </Link>
@@ -198,7 +212,6 @@ export default function LoginPage() {
           </div>
 
         </motion.div>
-
       </section>
 
     </main>

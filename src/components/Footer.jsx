@@ -11,8 +11,9 @@ import { motion } from "framer-motion";
 
 export default function Footer() {
   return (
-    <footer className="bg-[#111827] text-gray-300 border-t border-gray-800">
+    <footer className="relative overflow-hidden border-t border-red-900/20 bg-slate-950 text-gray-300">
 
+      <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-red-600 to-transparent" />
       <div className="max-w-7xl mx-auto px-6 py-16">
 
         <div className="grid lg:grid-cols-4 gap-12">
@@ -20,36 +21,28 @@ export default function Footer() {
           {/* Logo */}
           <div>
 
-            <div className="flex items-center gap-3">
+            <motion.img
+              whileHover={{
+                scale: 1.05,
+                rotate: 3,
+              }}
+              transition={{
+                type: "spring",
+              }}
+              src="#"
+              alt="Logo"
+              className="h-14 w-auto object-contain"
+            />
 
-              <motion.img
-                whileHover={{ scale: 1.08 }}
-                transition={{ type: "spring" }}
-                src="#"
-                alt="Monitoring OP"
-                className="w-12 h-12 rounded-xl"
-              />
-
-              <div>
-
-                <h2 className="text-xl font-bold text-white">
-                  Monitoring OP
-                </h2>
-
-              </div>
-
-            </div>
-
-            <p className="mt-6 leading-7 text-gray-400">
-              Monitoring OP merupakan platform untuk memantau seluruh proses
-              operasional secara real-time, mulai dari status pekerjaan,
-              progres, hingga laporan dalam satu dashboard terintegrasi.
+            <p className="mt-6 max-w-sm leading-7 text-gray-400">
+              Platform monitoring operasional yang membantu proses
+              pencatatan, pemantauan, dan pelaporan secara real-time
+              dalam satu dashboard terintegrasi.
             </p>
 
           </div>
 
           {/* Menu */}
-
           <div>
 
             <h3 className="text-white font-semibold mb-5">
@@ -61,7 +54,7 @@ export default function Footer() {
               <li>
                 <Link
                   href="/"
-                  className="hover:text-red-400 transition"
+                  className="text-gray-400 transition hover:translate-x-1 hover:text-white"
                 >
                   Home
                 </Link>
@@ -70,7 +63,7 @@ export default function Footer() {
               <li>
                 <Link
                   href="/about"
-                  className="hover:text-red-400 transition"
+                  className="text-gray-400 transition hover:translate-x-1 hover:text-white"
                 >
                   About
                 </Link>
@@ -90,36 +83,42 @@ export default function Footer() {
 
             <div className="space-y-4">
 
-              <div className="flex gap-3">
+              <div className="flex items-center gap-3 rounded-xl border border-slate-800 bg-slate-900/50 p-3">
 
                 <MapPin
-                  size={20}
+                  size={18}
                   className="text-red-500"
                 />
 
-                <span>Jakarta, Indonesia</span>
+                <span className="text-sm">
+                  Jakarta, Indonesia
+                </span>
 
               </div>
 
-              <div className="flex gap-3">
+              <div className="flex items-center gap-3 rounded-xl border border-slate-800 bg-slate-900/50 p-3">
 
                 <Mail
-                  size={20}
+                  size={18}
                   className="text-red-500"
                 />
 
-                <span>support@monitoringop.com</span>
+                <span className="text-sm">
+                  support@monitoringop.com
+                </span>
 
               </div>
 
-              <div className="flex gap-3">
+              <div className="flex items-center gap-3 rounded-xl border border-slate-800 bg-slate-900/50 p-3">
 
                 <Phone
-                  size={20}
+                  size={18}
                   className="text-red-500"
                 />
 
-                <span>(021) 1234 5678</span>
+                <span className="text-sm">
+                  (021) 1234 5678
+                </span>
 
               </div>
 
@@ -135,22 +134,26 @@ export default function Footer() {
               System Status
             </h3>
 
-            <div className="flex gap-3">
+            <div className="rounded-2xl border border-green-900/30 bg-green-950/20 p-5">
 
-              <ShieldCheck
-                size={22}
-                className="text-green-500 mt-1"
-              />
+              <div className="flex items-center gap-3">
 
-              <div>
+                <ShieldCheck
+                  size={22}
+                  className="text-green-400"
+                />
 
-                <p className="font-semibold text-white">
-                  All Systems Operational
-                </p>
+                <div>
 
-                <p className="text-sm text-gray-400 mt-1">
-                  Monitoring service is running normally.
-                </p>
+                  <h4 className="font-semibold text-white">
+                    All Systems Operational
+                  </h4>
+
+                  <p className="mt-1 text-sm text-gray-400">
+                    Monitoring service is running normally.
+                  </p>
+
+                </div>
 
               </div>
 
@@ -164,21 +167,27 @@ export default function Footer() {
 
       {/* Bottom */}
 
-      <div className="border-t border-gray-800">
+      <div className="border-t border-slate-800">
 
-        <div className="max-w-7xl mx-auto px-6 py-6 flex flex-col md:flex-row justify-between items-center gap-3">
+        <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-4 px-6 py-6 text-sm md:flex-row">
 
-          <p className="text-sm text-gray-500">
+          <p className="text-gray-500">
             © 2026 Monitoring OP. All rights reserved.
           </p>
 
-          <div className="flex items-center gap-6 text-sm text-gray-500">
+          <div className="flex items-center gap-6">
 
-            <span>Version 1.0.0</span>
-
-            <span className="text-green-500">
-              ● Online
+            <span className="text-gray-500">
+              Version 1.0.0
             </span>
+
+            <div className="flex items-center gap-2 rounded-full bg-green-950 px-3 py-1 text-green-400">
+
+              <span className="h-2 w-2 rounded-full bg-green-400 animate-pulse" />
+
+              Online
+
+            </div>
 
           </div>
 

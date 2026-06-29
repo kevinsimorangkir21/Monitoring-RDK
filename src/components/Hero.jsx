@@ -34,17 +34,42 @@ export default function Hero() {
   ];
 
   return (
-    <section className="relative overflow-hidden bg-gradient-to-br from-red-900 via-red-800 to-red-700 text-white">
+    <section className="relative flex min-h-[92vh] items-center overflow-hidden bg-gradient-to-br from-red-950 via-red-800 to-red-600 text-white">
 
       {/* Background */}
-      <div className="absolute inset-0 opacity-10">
-        <div className="absolute -top-32 -left-32 w-96 h-96 rounded-full bg-white blur-3xl"></div>
-        <div className="absolute bottom-0 right-0 w-[500px] h-[500px] rounded-full bg-red-300 blur-3xl"></div>
+      <div className="absolute inset-0">
+
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,.15),transparent_35%)]" />
+
+        <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,.05)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,.05)_1px,transparent_1px)] bg-[size:48px_48px]" />
+        <motion.div
+          animate={{
+            scale: [1, 1.15, 1],
+            opacity: [.25, .45, .25],
+          }}
+          transition={{
+            duration: 8,
+            repeat: Infinity,
+          }}
+          className="absolute -left-44 top-10 h-[420px] w-[420px] rounded-full bg-red-400 blur-[120px]"
+        />
+
+        <motion.div
+          animate={{
+            scale: [1.1, 1, 1.1],
+            opacity: [.2, .4, .2],
+          }}
+          transition={{
+            duration: 10,
+            repeat: Infinity,
+          }}
+          className="absolute -right-24 bottom-0 h-[500px] w-[500px] rounded-full bg-white blur-[150px]"
+        />
       </div>
 
-      <div className="relative max-w-7xl mx-auto px-6 py-32">
+      <div className="relative mx-auto flex w-full max-w-7xl items-center px-6 py-24 lg:py-32">
 
-        <div className="grid lg:grid-cols-2 gap-14 items-center">
+        <div className="grid lg:grid-cols-2 gap-14 items-center w-full">
 
           {/* Left */}
           <motion.div
@@ -56,9 +81,9 @@ export default function Hero() {
               Operational Monitoring System
             </span>
 
-            <h1 className="mt-6 text-5xl lg:text-6xl font-extrabold leading-tight">
+            <h1 className="mt-6 text-5xl font-black leading-tight lg:text-7xl">
               Monitoring
-              <span className="text-red-200"> Operational Process</span>
+              <span className="bg-gradient-to-r from-red-200 via-white to-red-100 bg-clip-text text-transparent"> Operational Process</span>
             </h1>
 
             <p className="mt-6 text-red-100 text-lg leading-8 max-w-xl">
@@ -67,21 +92,39 @@ export default function Hero() {
               dashboard terintegrasi.
             </p>
 
-            <div className="flex gap-4 mt-10">
-
-              <Link
-                href="/dashboard"
-                className="px-7 py-3 rounded-xl bg-white text-red-700 font-semibold hover:scale-105 transition"
-              >
-                Dashboard
-              </Link>
+            <div className="mt-12 flex flex-wrap gap-5">
 
               <Link
                 href="/monitoring"
-                className="px-7 py-3 rounded-xl border border-white/30 hover:bg-white/10 transition"
+                className="rounded-2xl border border-white/30 bg-white/5 px-8 py-4 font-semibold backdrop-blur transition hover:bg-white/10"
               >
                 Monitoring OP
               </Link>
+
+            </div>
+
+            <div className="mt-12 flex flex-wrap gap-10">
+
+              <div>
+                <h2 className="text-3xl font-black">1.245+</h2>
+                <p className="text-red-100">
+                  Operational Process
+                </p>
+              </div>
+
+              <div>
+                <h2 className="text-3xl font-black">98%</h2>
+                <p className="text-red-100">
+                  Monitoring Accuracy
+                </p>
+              </div>
+
+              <div>
+                <h2 className="text-3xl font-black">24/7</h2>
+                <p className="text-red-100">
+                  Real-time Monitoring
+                </p>
+              </div>
 
             </div>
 
@@ -96,9 +139,17 @@ export default function Hero() {
           >
 
             {cards.map((card) => (
-              <div
+              <motion.div
                 key={card.title}
-                className="rounded-3xl bg-white/10 backdrop-blur-xl border border-white/10 p-6"
+                whileHover={{
+                  y: -8,
+                  scale: 1.03,
+                }}
+                transition={{
+                  type: "spring",
+                  stiffness: 220,
+                }}
+                className="group rounded-3xl border border-white/10 bg-white/10 p-7 backdrop-blur-2xl transition-all duration-500 hover:-translate-y-3 hover:border-white/30 hover:bg-white/20"
               >
                 <card.icon
                   size={36}
@@ -112,7 +163,7 @@ export default function Hero() {
                 <p className="mt-2 text-4xl font-bold">
                   {card.value}
                 </p>
-              </div>
+              </motion.div>
             ))}
 
           </motion.div>
@@ -121,18 +172,8 @@ export default function Hero() {
 
       </div>
 
-      {/* Bottom Wave */}
-      <svg
-        className="absolute bottom-0 left-0 w-full"
-        viewBox="0 0 1440 120"
-        fill="none"
-      >
-        <path
-          fill="#f9fafb"
-          d="M0,64L80,69.3C160,75,320,85,480,80C640,75,800,53,960,53.3C1120,53,1280,75,1360,85.3L1440,96L1440,120L1360,120C1280,120,1120,120,960,120C800,120,640,120,480,120C320,120,160,120,80,120L0,120Z"
-        />
-      </svg>
-
+      {/* Bottom Transition */}
+      <div className="absolute bottom-0 left-0 h-40 w-full bg-gradient-to-b from-transparent to-slate-50" />
     </section>
   );
 }

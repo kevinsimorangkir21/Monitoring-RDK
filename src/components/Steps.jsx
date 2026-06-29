@@ -39,25 +39,26 @@ export default function Steps() {
           initial={{ opacity: 0, y: 30 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          className="text-center"
+          className="mb-16 max-w-3xl"
         >
-          <span className="inline-flex px-4 py-2 rounded-full bg-red-100 text-red-700 font-semibold text-sm">
+          <span className="inline-flex rounded-full bg-red-100 px-4 py-2 text-sm font-semibold text-red-700">
             Workflow
           </span>
 
-          <h2 className="mt-5 text-4xl font-bold text-gray-900">
-            Alur Monitoring Operational Process
+          <h2 className="mt-5 text-4xl font-black text-gray-900 lg:text-5xl">
+            Alur Monitoring
+            <span className="text-red-700"> Operational Process</span>
           </h2>
 
-          <p className="mt-4 text-gray-500 max-w-3xl mx-auto">
+          <p className="mt-5 max-w-2xl text-lg leading-8 text-gray-500">
             Sistem Monitoring OP membantu proses pencatatan, pemantauan,
             hingga pelaporan operasional secara cepat, akurat, dan
-            terintegrasi.
+            terintegrasi dalam satu dashboard.
           </p>
         </motion.div>
 
         {/* Steps */}
-        <div className="grid lg:grid-cols-3 gap-10 mt-20">
+        <div className="mt-14 grid gap-8 lg:grid-cols-3">
 
           {steps.map((step, index) => (
             <motion.div

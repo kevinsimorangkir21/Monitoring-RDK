@@ -1,65 +1,152 @@
 @import "tailwindcss";
 @import "bootstrap-icons/font/bootstrap-icons.css";
 
-/* ===========================================
-   ROOT
-=========================================== */
+/* =========================================================
+   ROOT VARIABLES
+========================================================= */
 
 :root {
-  --background: #f5f7fb;
+  --background: #f8fafc;
+  --surface: #ffffff;
+
   --foreground: #111827;
+  --muted: #6b7280;
 
   --primary: #dc2626;
   --primary-hover: #b91c1c;
 
+  --success: #16a34a;
+  --warning: #f59e0b;
+  --danger: #dc2626;
+
   --border: #e5e7eb;
+
+  --radius: 18px;
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, .04);
+  --shadow: 0 6px 24px rgba(15, 23, 42, .08);
+  --shadow-lg: 0 18px 48px rgba(15, 23, 42, .12);
+
+  --transition: .25s ease;
 }
 
-/* ===========================================
-   BASE
-=========================================== */
+/* =========================================================
+   RESET (SAFE)
+========================================================= */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
 
 html,
 body {
   width: 100%;
-  height: 100%;
+  min-height: 100%;
   margin: 0;
   padding: 0;
 }
 
 body {
-  overflow: hidden;
   background: var(--background);
   color: var(--foreground);
-  font-family:
-    Inter,
-    Arial,
-    Helvetica,
-    sans-serif;
+
+  font-size: 15px;
+  line-height: 1.6;
+
+  overflow-x: hidden;
+
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
 }
 
-/* ===========================================
-   LINKS
-=========================================== */
+/* =========================================================
+   TYPOGRAPHY
+========================================================= */
 
-a {
-  text-decoration: none;
-  color: inherit;
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  margin: 0;
+  line-height: 1.2;
+  font-weight: 700;
 }
 
-/* ===========================================
+p {
+  margin: 0;
+}
+
+/* =========================================================
+   LINK
+========================================================= */
+
+a {
+  color: inherit;
+  text-decoration: none;
+  transition: color var(--transition);
+}
+
+/* =========================================================
    BUTTON
-=========================================== */
+========================================================= */
 
 button {
   cursor: pointer;
+  transition: var(--transition);
 }
 
-/* ===========================================
+/* =========================================================
+   FORM
+========================================================= */
+
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+/* =========================================================
+   IMAGE
+========================================================= */
+
+img,
+svg,
+video {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  user-select: none;
+}
+
+/* =========================================================
+   FOCUS
+========================================================= */
+
+:focus-visible {
+  outline: 3px solid rgba(220, 38, 38, .20);
+  outline-offset: 2px;
+}
+
+/* =========================================================
+   SELECTION
+========================================================= */
+
+::selection {
+  background: rgba(220, 38, 38, .18);
+}
+
+/* =========================================================
    SCROLLBAR
-=========================================== */
+========================================================= */
 
 ::-webkit-scrollbar {
   width: 8px;
@@ -79,44 +166,104 @@ button {
   background: #94a3b8;
 }
 
-/* Firefox */
-
 * {
   scrollbar-width: thin;
   scrollbar-color: #cbd5e1 transparent;
 }
 
-/* ===========================================
-   SELECTION
-=========================================== */
-
-::selection {
-  background: rgba(220, 38, 38, .18);
-}
-
-/* ===========================================
-   IMAGE
-=========================================== */
-
-img {
-  display: block;
-  max-width: 100%;
-}
-
-/* ===========================================
-   INPUT
-=========================================== */
-
-input,
-textarea,
-select {
-  font: inherit;
-}
-
-/* ===========================================
-   REMOVE TAP COLOR
-=========================================== */
+/* =========================================================
+   TAP HIGHLIGHT
+========================================================= */
 
 * {
   -webkit-tap-highlight-color: transparent;
+}
+
+/* =========================================================
+   APP UTILITIES
+   (gunakan prefix app- agar tidak bentrok)
+========================================================= */
+
+.app-glass {
+  background: rgba(255, 255, 255, .75);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+}
+
+.app-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+
+.app-card-hover {
+  transition: var(--transition);
+}
+
+.app-card-hover:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-lg);
+}
+
+.app-gradient-red {
+  background: linear-gradient(135deg,
+      #dc2626,
+      #ef4444);
+}
+
+.app-text-muted {
+  color: var(--muted);
+}
+
+/* =========================================================
+   LOADING
+========================================================= */
+
+.app-loading {
+  animation: app-pulse 1.2s infinite;
+}
+
+@keyframes app-pulse {
+  0% {
+    opacity: .55;
+  }
+
+  50% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: .55;
+  }
+}
+
+/* =========================================================
+   RESPONSIVE
+========================================================= */
+
+@media (max-width:768px) {
+  body {
+    font-size: 14px;
+  }
+
+  :root {
+    --radius: 14px;
+  }
+}
+
+/* =========================================================
+   REDUCE MOTION
+========================================================= */
+
+@media (prefers-reduced-motion: reduce) {
+
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
+
 }

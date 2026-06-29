@@ -3,7 +3,14 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
+import {
+  Menu,
+  X,
+  LayoutDashboard,
+  LogOut,
+  LogIn,
+} from "lucide-react";
 
 export default function Navbar() {
   const pathname = usePathname();
@@ -13,19 +20,18 @@ export default function Navbar() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   useEffect(() => {
-    const user = localStorage.getItem("user");
-    setIsLoggedIn(!!user);
-  }, []);
-
-  useEffect(() => {
     const handleScroll = () => {
-      setScrolled(window.scrollY > 20);
+      setScrolled(window.scrollY > 15);
     };
 
     window.addEventListener("scroll", handleScroll);
 
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
+
+  useEffect(() => {
+    setMenuOpen(false);
+  }, [pathname]);
 
   const navLinks = [
     {
@@ -40,32 +46,39 @@ export default function Navbar() {
 
   return (
     <header
-      className={`fixed top-0 left-0 w-full z-50 transition-all duration-300 ${
-        scrolled
-          ? "bg-white/90 backdrop-blur-xl shadow-lg border-b border-red-100"
-          : "bg-white"
-      }`}
+      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${scrolled
+        ? "bg-white/80 backdrop-blur-2xl border-b border-red-100 shadow-sm"
+        : "bg-white"
+        }`}
     >
-      <div className="max-w-7xl mx-auto flex items-center justify-between px-6 py-4">
+      <div className="max-w-7xl mx-auto h-20 px-5 sm:px-8 flex items-center justify-between">
         {/* Logo */}
-        <Link href="/" className="flex items-center gap-3">
-          <motion.img
-            whileHover={{ scale: 1.08, rotate: 5 }}
-            transition={{ type: "spring" }}
-            src="#"
-            alt="Monitoring OP"
-            className="w-12 h-12 rounded-xl"
-          />
 
-          <div>
-            <h1 className="text-lg font-bold text-gray-900">
-              Monitoring OP
-            </h1>
-          </div>
+        <Link
+          href="/"
+          className="group flex items-center"
+        >
+          <motion.img
+            whileHover={{
+              scale: 1.08,
+              rotate: 3,
+            }}
+            transition={{
+              type: "spring",
+              stiffness: 250,
+            }}
+            src="#"
+            alt="Logo"
+            className="h-11 w-auto object-contain"
+          />
         </Link>
 
-        {/* Desktop Menu */}
-        <nav className="hidden md:flex items-center gap-8">
+        {/* Desktop Navigation */}
+
+        <nav
+          aria-label="Main Navigation"
+          className="hidden lg:flex items-center gap-2"
+        >
           {navLinks.map((item) => {
             const active = pathname === item.href;
 
@@ -73,75 +86,63 @@ export default function Navbar() {
               <Link
                 key={item.href}
                 href={item.href}
-                className={`relative text-sm font-medium transition ${
-                  active
-                    ? "text-red-700"
-                    : "text-gray-700 hover:text-red-600"
-                }`}
+                className={`group relative overflow-hidden rounded-xl px-5 py-2 font-medium transition-all duration-300 ${active
+                  ? "bg-red-700 text-white"
+                  : "bg-transparent text-gray-700 hover:bg-red-600 hover:text-white"
+                  }`}
               >
-                {item.label}
-
-                {active && (
-                  <motion.span
-                    layoutId="activeLink"
-                    className="absolute left-0 -bottom-1 h-[2px] w-full rounded-full bg-red-700"
-                  />
-                )}
+                <span
+                  className={`transition-colors duration-300 ${active
+                    ? "text-white"
+                    : "text-gray-700 group-hover:text-white"
+                    }`}
+                >
+                  {item.label}
+                </span>
               </Link>
             );
           })}
         </nav>
 
         {/* Right */}
+
         <div className="flex items-center gap-3">
           {!isLoggedIn ? (
-            <button
-              onClick={() => {
-                localStorage.setItem("user", "admin");
-                setIsLoggedIn(true);
-              }}
-              className="hidden md:flex px-5 py-2 rounded-xl bg-red-700 hover:bg-red-800 text-white font-semibold transition"
+            <Link
+              href="/login"
+              className="hidden lg:flex items-center gap-2 rounded-xl bg-gradient-to-r from-red-600 to-red-700 px-5 py-2.5 font-semibold text-white shadow-lg transition duration-300 hover:scale-105 hover:shadow-xl"
             >
+              <LogIn size={18} />
               Login
-            </button>
+            </Link>
           ) : (
-            <>
-              <Link
-                href="/dashboard"
-                className="hidden md:flex px-5 py-2 rounded-xl bg-red-700 hover:bg-red-800 text-white font-semibold transition"
-              >
-                Dashboard
-              </Link>
-
-              <button
-                onClick={() => {
-                  localStorage.removeItem("user");
-                  setIsLoggedIn(false);
-                }}
-                className="hidden md:block text-red-600 hover:text-red-700"
-              >
-                Logout
-              </button>
-
-              <img
-                src="https://i.pravatar.cc/100"
-                alt="avatar"
-                className="w-10 h-10 rounded-full border-2 border-red-200"
-              />
-            </>
+            <Link
+              href="/dashboard"
+              className="hidden lg:flex items-center gap-2 rounded-xl bg-red-700 px-5 py-2.5 font-semibold text-white transition hover:bg-red-800"
+            >
+              <LayoutDashboard size={18} />
+              Dashboard
+            </Link>
           )}
 
           {/* Mobile Button */}
+
           <button
+            aria-label="Open Menu"
             onClick={() => setMenuOpen(!menuOpen)}
-            className="md:hidden w-10 h-10 rounded-xl border border-red-200 hover:bg-red-50 flex items-center justify-center"
+            className="lg:hidden p-2.5 rounded-xl border border-gray-200 hover:bg-red-50 transition"
           >
-            {menuOpen ? "✕" : "☰"}
+            {menuOpen ? (
+              <X size={22} />
+            ) : (
+              <Menu size={22} />
+            )}
           </button>
         </div>
       </div>
 
       {/* Mobile Menu */}
+
       <AnimatePresence>
         {menuOpen && (
           <motion.div
@@ -157,9 +158,12 @@ export default function Navbar() {
               opacity: 0,
               y: -20,
             }}
-            className="md:hidden bg-white border-t border-red-100 shadow-xl"
+            transition={{
+              duration: 0.25,
+            }}
+            className="lg:hidden border-t border-red-100 bg-white shadow-xl"
           >
-            <div className="flex flex-col gap-2 p-5">
+            <div className="px-5 py-6 space-y-2">
               {navLinks.map((item) => {
                 const active = pathname === item.href;
 
@@ -167,12 +171,10 @@ export default function Navbar() {
                   <Link
                     key={item.href}
                     href={item.href}
-                    onClick={() => setMenuOpen(false)}
-                    className={`px-4 py-3 rounded-xl font-medium transition ${
-                      active
-                        ? "bg-red-700 text-white"
-                        : "hover:bg-red-50 text-gray-700"
-                    }`}
+                    className={`flex items-center rounded-xl px-5 py-4 font-medium transition ${active
+                      ? "bg-red-700 text-white"
+                      : "text-gray-700 hover:bg-red-50"
+                      }`}
                   >
                     {item.label}
                   </Link>
@@ -180,36 +182,52 @@ export default function Navbar() {
               })}
 
               {!isLoggedIn ? (
-                <button
-                  onClick={() => {
-                    localStorage.setItem("user", "admin");
-                    setIsLoggedIn(true);
-                    setMenuOpen(false);
-                  }}
-                  className="mt-3 py-3 rounded-xl bg-red-700 hover:bg-red-800 text-white font-semibold"
+                <Link
+                  href="/login"
+                  onClick={() => setMenuOpen(false)}
+                  className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-red-600 to-red-700 py-4 font-semibold text-white transition duration-300 hover:from-red-700 hover:to-red-800"
                 >
+                  <LogIn size={18} />
                   Login
-                </button>
+                </Link>
               ) : (
                 <>
                   <Link
                     href="/dashboard"
-                    onClick={() => setMenuOpen(false)}
-                    className="mt-3 py-3 rounded-xl bg-red-700 text-white text-center font-semibold"
+                    className="mt-4 flex items-center justify-center gap-2 rounded-xl bg-red-700 py-4 text-white font-semibold"
                   >
+                    <LayoutDashboard size={18} />
                     Dashboard
                   </Link>
 
                   <button
                     onClick={() => {
-                      localStorage.removeItem("user");
                       setIsLoggedIn(false);
                       setMenuOpen(false);
                     }}
-                    className="py-3 rounded-xl border border-red-200 text-red-700 hover:bg-red-50 font-semibold"
+                    className="w-full mt-3 rounded-xl border border-red-200 py-4 text-red-700 font-semibold flex items-center justify-center gap-2 hover:bg-red-50 transition"
                   >
+                    <LogOut size={18} />
                     Logout
                   </button>
+
+                  <div className="mt-5 flex items-center gap-3 border rounded-2xl p-3">
+                    <img
+                      src="https://i.pravatar.cc/100"
+                      className="w-12 h-12 rounded-full"
+                      alt="avatar"
+                    />
+
+                    <div>
+                      <h3 className="font-semibold">
+                        Admin
+                      </h3>
+
+                      <p className="text-sm text-gray-500">
+                        Online
+                      </p>
+                    </div>
+                  </div>
                 </>
               )}
             </div>
