@@ -6,11 +6,11 @@
  * Lazy-loaded via dynamic() in the page.
  */
 
-import { useCallback, useState } from "react";
 import {
     PieChart, Pie, Cell,
     Tooltip, Sector, ResponsiveContainer,
 } from "recharts";
+import type { PieShape, PieSectorShapeProps } from "recharts";
 import { produktivitasBongkarData } from "@/mock/inbound";
 import type { ProduktivitasBongkarItem } from "@/types/inbound";
 
@@ -27,34 +27,25 @@ const COLORS = [
 
 // ─── Active (hover) shape — slice expands slightly ───────────────────────────
 
-interface ActiveShapeProps {
-    cx: number;
-    cy: number;
-    innerRadius: number;
-    outerRadius: number;
-    startAngle: number;
-    endAngle: number;
-    fill: string;
-}
-
-function ActiveShape({
-    cx, cy,
-    innerRadius, outerRadius,
-    startAngle, endAngle,
-    fill,
-}: ActiveShapeProps) {
+const ActiveSlice: PieShape = (props: PieSectorShapeProps) => {
+    const {
+        cx, cy,
+        innerRadius, outerRadius,
+        startAngle, endAngle,
+        fill, isActive,
+    } = props;
     return (
         <Sector
             cx={cx}
             cy={cy}
-            innerRadius={innerRadius - 2}
-            outerRadius={outerRadius + 8}
+            innerRadius={isActive ? (innerRadius as number) - 2 : innerRadius as number}
+            outerRadius={isActive ? (outerRadius as number) + 8 : outerRadius as number}
             startAngle={startAngle}
             endAngle={endAngle}
             fill={fill}
         />
     );
-}
+};
 
 // ─── Custom Tooltip ───────────────────────────────────────────────────────────
 
@@ -85,10 +76,6 @@ function ChartTooltip({ active, payload }: TooltipProps) {
 
 export default function ProductivityChart() {
     const data = produktivitasBongkarData;
-    const [activeIdx, setActiveIdx] = useState<number | undefined>(undefined);
-
-    const onEnter = useCallback((_: unknown, idx: number) => setActiveIdx(idx), []);
-    const onLeave = useCallback(() => setActiveIdx(undefined), []);
 
     if (!data.length) {
         return (
@@ -136,10 +123,7 @@ export default function ProductivityChart() {
                             paddingAngle={2}
                             stroke="#ffffff"
                             strokeWidth={2}
-                            activeIndex={activeIdx}
-                            activeShape={ActiveShape as never}
-                            onMouseEnter={onEnter}
-                            onMouseLeave={onLeave}
+                            shape={ActiveSlice}
                             isAnimationActive
                             animationDuration={800}
                             animationEasing="ease-out"
