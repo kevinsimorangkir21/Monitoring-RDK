@@ -19,6 +19,7 @@ import {
     Tooltip, Legend,
     LabelList,
 } from "recharts";
+import type { PieLabelRenderProps } from "recharts";
 import {
     claimTrendData,
     claimByVendorData,
@@ -112,12 +113,14 @@ export const ClaimByVendorChart = memo(function ClaimByVendorChart() {
 // ─── 3. Claim by Category (Donut) ─────────────────────────────────────────────
 
 const RADIAN = Math.PI / 180;
-function CustomLabel({
-    cx, cy, midAngle, innerRadius, outerRadius, percent,
-}: {
-    cx: number; cy: number; midAngle: number;
-    innerRadius: number; outerRadius: number; percent: number;
-}) {
+function CustomLabel(props: PieLabelRenderProps) {
+    const cx = Number(props.cx ?? 0);
+    const cy = Number(props.cy ?? 0);
+    const midAngle = Number(props.midAngle ?? 0);
+    const innerRadius = Number(props.innerRadius ?? 0);
+    const outerRadius = Number(props.outerRadius ?? 0);
+    const percent = Number(props.percent ?? 0);
+
     const r = innerRadius + (outerRadius - innerRadius) * 0.5;
     const x = cx + r * Math.cos(-midAngle * RADIAN);
     const y = cy + r * Math.sin(-midAngle * RADIAN);

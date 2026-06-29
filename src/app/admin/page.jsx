@@ -1,6 +1,5 @@
 "use client";
 
-import { useEffect, useRef } from "react";
 import {
   ArrowDownCircle,
   ArrowUpCircle,
@@ -16,11 +15,17 @@ import {
   AlertTriangle,
   Bell,
 } from "lucide-react";
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+} from "recharts";
 
 export default function DashboardPage() {
-  const chartRef = useRef(null);
-  const chartInstanceRef = useRef(null);
-
   const summary = [
     {
       title: "Inbound",
@@ -99,102 +104,6 @@ export default function DashboardPage() {
     { no: "OP240705", area: "Semarang", pic: "Budi", progress: 44, status: "Delay" },
   ];
 
-  useEffect(() => {
-    let Chart;
-    const loadChart = async () => {
-      try {
-        const module = await import("chart.js");
-        Chart = module.Chart;
-
-        // Register all required components
-        const {
-          BarController,
-          BarElement,
-          CategoryScale,
-          LinearScale,
-          Tooltip,
-          Legend,
-        } = module;
-        Chart.register(
-          BarController,
-          BarElement,
-          CategoryScale,
-          LinearScale,
-          Tooltip,
-          Legend
-        );
-      } catch {
-        // Fallback: try window.Chart (if loaded via CDN)
-        Chart = window.Chart;
-      }
-
-      if (!Chart || !chartRef.current) return;
-
-      // Destroy previous instance to avoid canvas reuse error
-      if (chartInstanceRef.current) {
-        chartInstanceRef.current.destroy();
-      }
-
-      chartInstanceRef.current = new Chart(chartRef.current, {
-        type: "bar",
-        data: {
-          labels: chartData.map((d) => d.day),
-          datasets: [
-            {
-              label: "Inbound",
-              data: chartData.map((d) => d.inbound),
-              backgroundColor: "#dc2626",
-              borderRadius: 4,
-              barPercentage: 0.55,
-            },
-            {
-              label: "Outbound",
-              data: chartData.map((d) => d.outbound),
-              backgroundColor: "#2563eb",
-              borderRadius: 4,
-              barPercentage: 0.55,
-            },
-          ],
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: {
-            legend: { display: false },
-            tooltip: {
-              backgroundColor: "#1f2937",
-              titleColor: "#f9fafb",
-              bodyColor: "#d1d5db",
-              padding: 10,
-              cornerRadius: 8,
-            },
-          },
-          scales: {
-            x: {
-              grid: { display: false },
-              border: { display: false },
-              ticks: { color: "#6b7280", font: { size: 12 } },
-            },
-            y: {
-              grid: { color: "#f3f4f6" },
-              border: { display: false },
-              ticks: { color: "#6b7280", font: { size: 11 } },
-            },
-          },
-        },
-      });
-    };
-
-    loadChart();
-
-    return () => {
-      if (chartInstanceRef.current) {
-        chartInstanceRef.current.destroy();
-        chartInstanceRef.current = null;
-      }
-    };
-  }, []);
-
   const statusBadge = (status) => {
     const map = {
       Completed: "bg-green-100 text-green-700",
@@ -224,17 +133,11 @@ export default function DashboardPage() {
               <div>
                 <p className="text-gray-500 text-sm">{item.title}</p>
                 <h2 className="text-3xl font-bold mt-2">{item.value}</h2>
-                <p
-                  className={`text-sm mt-3 ${
-                    item.positive ? "text-green-600" : "text-red-500"
-                  }`}
-                >
+                <p className={`text-sm mt-3 ${item.positive ? "text-green-600" : "text-red-500"}`}>
                   {item.growth} dibanding kemarin
                 </p>
               </div>
-              <div
-                className={`w-14 h-14 rounded-xl flex items-center justify-center ${item.color}`}
-              >
+              <div className={`w-14 h-14 rounded-xl flex items-center justify-center ${item.color}`}>
                 <item.icon className="text-white" />
               </div>
             </div>
@@ -301,7 +204,7 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Chart */}
+      {/* Chart — Recharts (replaces Chart.js) */}
       <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
         <h2 className="text-lg font-semibold mb-4">Inbound vs Outbound</h2>
 
@@ -317,8 +220,40 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        <div className="relative h-72">
-          <canvas ref={chartRef} />
+        <div className="h-72">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart
+              data={chartData}
+              margin={{ top: 4, right: 8, left: -16, bottom: 0 }}
+              barCategoryGap="30%"
+              barGap={4}
+            >
+              <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" vertical={false} />
+              <XAxis
+                dataKey="day"
+                tick={{ fill: "#6b7280", fontSize: 12 }}
+                axisLine={false}
+                tickLine={false}
+              />
+              <YAxis
+                tick={{ fill: "#6b7280", fontSize: 11 }}
+                axisLine={false}
+                tickLine={false}
+              />
+              <Tooltip
+                contentStyle={{
+                  backgroundColor: "#1f2937",
+                  border: "none",
+                  borderRadius: 8,
+                  fontSize: 12,
+                }}
+                labelStyle={{ color: "#f9fafb" }}
+                itemStyle={{ color: "#d1d5db" }}
+              />
+              <Bar dataKey="inbound" name="Inbound" fill="#dc2626" radius={[4, 4, 0, 0]} maxBarSize={36} />
+              <Bar dataKey="outbound" name="Outbound" fill="#2563eb" radius={[4, 4, 0, 0]} maxBarSize={36} />
+            </BarChart>
+          </ResponsiveContainer>
         </div>
       </div>
 
@@ -374,15 +309,11 @@ export default function DashboardPage() {
                           style={{ width: `${item.progress}%` }}
                         />
                       </div>
-                      <span className="text-sm font-semibold">
-                        {item.progress}%
-                      </span>
+                      <span className="text-sm font-semibold">{item.progress}%</span>
                     </div>
                   </td>
                   <td>
-                    <span className={statusBadge(item.status)}>
-                      {item.status}
-                    </span>
+                    <span className={statusBadge(item.status)}>{item.status}</span>
                   </td>
                 </tr>
               ))}
