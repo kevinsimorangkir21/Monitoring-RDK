@@ -54,6 +54,7 @@ export default function WarehouseBSChart() {
                         />
                         <Bar dataKey="masuk" name="Masuk" fill="#16A34A" radius={[4, 4, 0, 0]} maxBarSize={28} />
                         <Bar dataKey="keluar" name="Keluar" fill="#DC2626" radius={[4, 4, 0, 0]} maxBarSize={28} />
+                        <Bar dataKey="repack" name="Repack" fill="#8B5CF6" radius={[4, 4, 0, 0]} maxBarSize={28} />
                     </BarChart>
                 </ResponsiveContainer>
             </div>

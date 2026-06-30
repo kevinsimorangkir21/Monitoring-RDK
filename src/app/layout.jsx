@@ -1,5 +1,6 @@
 import "./globals.css";
 import ClientLayoutWrapper from "@/components/ClientLayoutWrapper";
+import { UserProvider } from "@/contexts/UserContext";
 
 export const metadata = {
   title: "Monitoring OP",
@@ -14,9 +15,11 @@ export default function RootLayout({ children }) {
   return (
     <html lang="id">
       <body className="min-h-screen bg-gray-50 text-gray-900 antialiased">
-        <ClientLayoutWrapper>
-          {children}
-        </ClientLayoutWrapper>
+        <UserProvider>
+          <ClientLayoutWrapper>
+            {children}
+          </ClientLayoutWrapper>
+        </UserProvider>
       </body>
     </html>
   );

@@ -23,13 +23,13 @@ export const KPI: WoWtKPI = {
 // ─── Chart: Daily WO-WT Trend ─────────────────────────────────────────────────
 
 export const dailyTrendData: DailyTrendItem[] = [
-    { date: "22 Jun", ZWP1: 88.5, ZWP2: 83.2, ZWP4: 86.4, ZWP5: 82.1 },
-    { date: "23 Jun", ZWP1: 90.1, ZWP2: 84.7, ZWP4: 87.2, ZWP5: 83.4 },
-    { date: "24 Jun", ZWP1: 89.3, ZWP2: 86.1, ZWP4: 85.9, ZWP5: 81.7 },
-    { date: "25 Jun", ZWP1: 92.4, ZWP2: 85.9, ZWP4: 89.0, ZWP5: 85.2 },
-    { date: "26 Jun", ZWP1: 91.0, ZWP2: 87.3, ZWP4: 88.6, ZWP5: 84.8 },
-    { date: "27 Jun", ZWP1: 90.8, ZWP2: 86.2, ZWP4: 89.1, ZWP5: 86.0 },
-    { date: "28 Jun", ZWP1: 91.2, ZWP2: 85.7, ZWP4: 88.3, ZWP5: 84.4 },
+    { date: "22 Jun", ZWP1: 88.5, ZWP2: 83.2, ZWP4: 86.4, ZWP5: 82.1, globalWoWt: 85.1 },
+    { date: "23 Jun", ZWP1: 90.1, ZWP2: 84.7, ZWP4: 87.2, ZWP5: 83.4, globalWoWt: 86.4 },
+    { date: "24 Jun", ZWP1: 89.3, ZWP2: 86.1, ZWP4: 85.9, ZWP5: 81.7, globalWoWt: 85.8 },
+    { date: "25 Jun", ZWP1: 92.4, ZWP2: 85.9, ZWP4: 89.0, ZWP5: 85.2, globalWoWt: 88.1 },
+    { date: "26 Jun", ZWP1: 91.0, ZWP2: 87.3, ZWP4: 88.6, ZWP5: 84.8, globalWoWt: 87.9 },
+    { date: "27 Jun", ZWP1: 90.8, ZWP2: 86.2, ZWP4: 89.1, ZWP5: 86.0, globalWoWt: 88.0 },
+    { date: "28 Jun", ZWP1: 91.2, ZWP2: 85.7, ZWP4: 88.3, ZWP5: 84.4, globalWoWt: 87.4 },
 ];
 
 // ─── Chart: Average WO-WT Comparison ─────────────────────────────────────────

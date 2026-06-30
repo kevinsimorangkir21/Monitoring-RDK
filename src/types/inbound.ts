@@ -55,6 +55,9 @@ export interface KontribusiSupplyItem {
     totalMobil: number;
 }
 
+/** @deprecated Use BongkaranByPlantItem */
+export type BongkaranByPlantItem = KontribusiSupplyItem;
+
 export interface ProduktivitasItem {
     name: string;
     value: number;

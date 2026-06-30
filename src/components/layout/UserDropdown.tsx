@@ -8,6 +8,26 @@
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronDown, UserCircle, Settings, LogOut } from "lucide-react";
+import { useUser } from "@/contexts/UserContext";
+
+// ── Helpers ────────────────────────────────────────────────────────────────────
+
+function formatRole(role: string): string {
+    return role
+        .split("_")
+        .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+        .join(" ");
+}
+
+function getInitials(name: string): string {
+    return name
+        .split(" ")
+        .filter(Boolean)
+        .map((w) => w[0].toUpperCase())
+        .join("");
+}
+
+// ── Types ──────────────────────────────────────────────────────────────────────
 
 interface DropdownItem {
     label: string;
@@ -16,26 +36,72 @@ interface DropdownItem {
     danger?: boolean;
 }
 
-const DROPDOWN_ITEMS: DropdownItem[] = [
-    { label: "Profile", icon: UserCircle },
-    { label: "Settings", icon: Settings },
-    { label: "Logout", icon: LogOut, danger: true },
-];
-
 export default function UserDropdown() {
+    const { user, logout } = useUser();
     const [open, setOpen] = useState(false);
     const ref = useRef<HTMLDivElement>(null);
 
+    // Do not render if user data is unavailable
+    if (!user) return null;
+
+    const DROPDOWN_ITEMS: DropdownItem[] = [
+        { label: "Profile", icon: UserCircle },
+        { label: "Settings", icon: Settings },
+        {
+            label: "Logout",
+            icon: LogOut,
+            danger: true,
+            onClick: () => { logout(); },
+        },
+    ];
+
+    const initials = getInitials(user.name);
+    const formattedRole = formatRole(user.role);
+
+    return (
+        <DropdownInner
+            user={user}
+            initials={initials}
+            formattedRole={formattedRole}
+            dropdownItems={DROPDOWN_ITEMS}
+            open={open}
+            setOpen={setOpen}
+            containerRef={ref}
+        />
+    );
+}
+
+// ── Inner component (separated so hooks are always called unconditionally) ─────
+
+interface DropdownInnerProps {
+    user: { name: string; email: string; role: string };
+    initials: string;
+    formattedRole: string;
+    dropdownItems: DropdownItem[];
+    open: boolean;
+    setOpen: React.Dispatch<React.SetStateAction<boolean>>;
+    containerRef: React.RefObject<HTMLDivElement>;
+}
+
+function DropdownInner({
+    user,
+    initials,
+    formattedRole,
+    dropdownItems,
+    open,
+    setOpen,
+    containerRef,
+}: DropdownInnerProps) {
     // Close on outside click
     useEffect(() => {
         function handleClick(e: MouseEvent) {
-            if (ref.current && !ref.current.contains(e.target as Node)) {
+            if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
                 setOpen(false);
             }
         }
         document.addEventListener("mousedown", handleClick);
         return () => document.removeEventListener("mousedown", handleClick);
-    }, []);
+    }, [containerRef, setOpen]);
 
     // Close on Escape
     useEffect(() => {
@@ -44,10 +110,10 @@ export default function UserDropdown() {
         }
         document.addEventListener("keydown", handleKey);
         return () => document.removeEventListener("keydown", handleKey);
-    }, []);
+    }, [setOpen]);
 
     return (
-        <div ref={ref} className="relative">
+        <div ref={containerRef} className="relative">
             {/* Trigger */}
             <button
                 onClick={() => setOpen((v) => !v)}
@@ -55,14 +121,16 @@ export default function UserDropdown() {
                 aria-haspopup="true"
                 aria-expanded={open}
             >
-                <img
-                    src="https://i.pravatar.cc/100?img=12"
-                    alt="User avatar"
-                    className="w-8 h-8 rounded-full ring-2 ring-white object-cover"
-                />
+                {/* Avatar — initials-based */}
+                <div
+                    className="w-8 h-8 rounded-full ring-2 ring-white bg-blue-600 flex items-center justify-center text-white text-xs font-bold select-none"
+                    aria-label={`Avatar for ${user.name}`}
+                >
+                    {initials}
+                </div>
                 <div className="hidden sm:block text-left">
-                    <p className="text-sm font-semibold text-gray-900 leading-tight">Kevin</p>
-                    <p className="text-[11px] text-gray-400 leading-tight">Administrator</p>
+                    <p className="text-sm font-semibold text-gray-900 leading-tight">{user.name}</p>
+                    <p className="text-[11px] text-gray-400 leading-tight">{formattedRole}</p>
                 </div>
                 <motion.span
                     animate={{ rotate: open ? 180 : 0 }}
@@ -84,13 +152,13 @@ export default function UserDropdown() {
                     >
                         {/* User info header */}
                         <div className="px-4 py-3 border-b border-gray-50">
-                            <p className="text-sm font-semibold text-gray-900">Kevin</p>
-                            <p className="text-xs text-gray-400">kevin@monitoring.op</p>
+                            <p className="text-sm font-semibold text-gray-900">{user.name}</p>
+                            <p className="text-xs text-gray-400">{user.email}</p>
                         </div>
 
                         {/* Actions */}
                         <div className="py-1">
-                            {DROPDOWN_ITEMS.map((item) => (
+                            {dropdownItems.map((item) => (
                                 <button
                                     key={item.label}
                                     onClick={() => {

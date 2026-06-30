@@ -130,9 +130,9 @@ export default function StatusFOChart() {
         >
             {/* Header */}
             <div className="mb-2 shrink-0">
-                <p className="text-sm font-semibold text-[#111827]">Klasifikasi Status FO</p>
+                <p className="text-sm font-semibold text-[#111827]">Status FO</p>
                 <p className="text-xs text-[#64748B]">
-                    Distribusi Freight Order berdasarkan status setiap hari
+                    Distribusi Freight Order berdasarkan status
                 </p>
             </div>
 

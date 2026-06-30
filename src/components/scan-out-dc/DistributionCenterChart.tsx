@@ -23,8 +23,8 @@ export default function DistributionCenterChart() {
     return (
         <div className="bg-white border border-[#E5E7EB] rounded-[18px] p-5 shadow-sm">
             <div className="mb-4">
-                <p className="text-sm font-semibold text-[#111827]">Scan Out by Distribution Center</p>
-                <p className="text-xs text-[#64748B]">Total scan per DC</p>
+                <p className="text-sm font-semibold text-[#111827]">Scan Out by Vendor</p>
+                <p className="text-xs text-[#64748B]">Total scan per vendor</p>
             </div>
             <div className="h-[220px]">
                 <ResponsiveContainer width="100%" height="100%">

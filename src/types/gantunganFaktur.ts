@@ -48,6 +48,13 @@ export interface DokumenHarianItem {
     jumlah: number;
 }
 
+/** Combined chart data merging nominal + dokumen by tanggal */
+export interface NominalDokumenItem {
+    tanggal: string;
+    nominal: number;
+    jumlah: number;
+}
+
 export interface NominalPerVendorItem {
     vendor: string;
     nominal: number;

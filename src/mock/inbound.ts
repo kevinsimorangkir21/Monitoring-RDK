@@ -82,7 +82,7 @@ export const supplierContributionData: SupplierContribution[] = [
     { supplier: "CV Mandiri", totalBox: 54800 },
 ];
 
-export const kontribusiSupplyData: KontribusiSupplyItem[] = [
+export const bongkaranByPlantData: KontribusiSupplyItem[] = [
     { plant: "PAS", totalMobil: 38 },
     { plant: "MIM", totalMobil: 19 },
     { plant: "SMU2", totalMobil: 15 },
@@ -96,6 +96,9 @@ export const kontribusiSupplyData: KontribusiSupplyItem[] = [
     { plant: "UNKNOWN", totalMobil: 1 },
     { plant: "HAS", totalMobil: 1 },
 ];
+
+/** @deprecated Use bongkaranByPlantData */
+export const kontribusiSupplyData = bongkaranByPlantData;
 
 export const produktivitasData: ProduktivitasItem[] = [
     { name: "Tepat Waktu", value: 62, color: "#10B981" },

@@ -3,30 +3,26 @@
 /**
  * /admin/scan-out-dc — Scan Out DC Monitoring Page
  * ─────────────────────────────────────────────────────────────────────────────
- * Distribution Center Scan Out Monitoring Dashboard
+ * Sections:
+ *   1. Page Header           — title, subtitle, Refresh, Export, Last Update
+ *   2. KPI Cards             — Total Scan Out | Completed | Pending | Failed
+ *   3. Scan Out per Hour     — Line chart (full width)
+ *   4. Scan Out by Vendor    — Horizontal bar chart (full width)
+ *   5. Average Jam Scan Out  — Bar chart (full width, kendaraan sebelum 10:00)
+ *   6. Detail Table          — Scan Out DC Detail with drawer on View
  *
- * Sections (exact original order):
- *   1. Page Header     — title, subtitle, Refresh, Export, Last Update
- *   2. KPI Cards       — Total Scan Out | Completed | Pending | Failed
- *   3. Charts Row 1    — Scan Out per Hour (Line)
- *   4. Charts Row 2    — DC Chart (Horiz Bar) + Success Rate (Donut)
- *   5. Charts Row 3    — Daily Trend (Area) + Activity Timeline
- *   6. Detail Table    — Scan Out DC Detail with drawer on View
- *
- * Filters: NOT here — they live in the sidebar.
+ * Removed per revision spec: SuccessRateChart (Success vs Failed Scan),
+ *   ActivityTimeline (Aktivitas Terbaru).
  */
 
 import { useState, useCallback } from "react";
 import { motion, type Variants } from "framer-motion";
 import dynamic from "next/dynamic";
 
-// ── Hook ───────────────────────────────────────────────────────────────────────
 import { useScanOutDC } from "@/hooks/useScanOutDC";
 import type { ScanOutRecord } from "@/types/scanOutDC";
 
-// ── Static components ──────────────────────────────────────────────────────────
 import SummaryCards from "@/components/scan-out-dc/SummaryCards";
-import ActivityTimeline from "@/components/scan-out-dc/ActivityTimeline";
 import ScanOutTable from "@/components/scan-out-dc/ScanOutTable";
 import ExportButton from "@/components/scan-out-dc/ExportButton";
 import RefreshButton from "@/components/scan-out-dc/RefreshButton";
@@ -38,10 +34,6 @@ const HourlyScanChart = dynamic(
 );
 const DistributionCenterChart = dynamic(
     () => import("@/components/scan-out-dc/DistributionCenterChart"),
-    { ssr: false, loading: () => <ChartSkeleton h={268} /> }
-);
-const SuccessRateChart = dynamic(
-    () => import("@/components/scan-out-dc/SuccessRateChart"),
     { ssr: false, loading: () => <ChartSkeleton h={268} /> }
 );
 const DailyTrendChart = dynamic(
@@ -72,8 +64,6 @@ function lastUpdateLabel() {
         hour: "2-digit", minute: "2-digit",
     });
 }
-
-// ─── Animation variants ────────────────────────────────────────────────────────
 
 const fadeUp: Variants = {
     hidden: { opacity: 0, y: 14 },
@@ -113,7 +103,7 @@ export default function ScanOutDCPage() {
                 <div>
                     <h1 className="text-xl font-bold text-[#111827] leading-tight">Scan Out DC</h1>
                     <p className="text-xs text-[#64748B] mt-1">
-                        Distribution Center Scan Out Monitoring Dashboard
+                        Scan Out by Vendor Monitoring Dashboard
                     </p>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
@@ -130,23 +120,19 @@ export default function ScanOutDCPage() {
                 <SummaryCards />
             </motion.div>
 
-            {/* ── 3. Charts Row 1 — Scan Out per Hour (full width) ───────────────── */}
+            {/* ── 3. Scan Out per Hour (full width) ──────────────────────────────── */}
             <motion.div custom={2} initial="hidden" animate="visible" variants={fadeUp}>
                 <HourlyScanChart />
             </motion.div>
 
-            {/* ── 4. Charts Row 2 — DC Chart + Success Rate ──────────────────────── */}
-            <motion.div custom={3} initial="hidden" animate="visible" variants={fadeUp}
-                className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            {/* ── 4. Scan Out by Vendor (full width) ─────────────────────────────── */}
+            <motion.div custom={3} initial="hidden" animate="visible" variants={fadeUp}>
                 <DistributionCenterChart />
-                <SuccessRateChart />
             </motion.div>
 
-            {/* ── 5. Charts Row 3 — Daily Trend + Activity Timeline ─────────────── */}
-            <motion.div custom={4} initial="hidden" animate="visible" variants={fadeUp}
-                className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            {/* ── 5. Average Jam Scan Out (full width) ────────────────────────────── */}
+            <motion.div custom={4} initial="hidden" animate="visible" variants={fadeUp}>
                 <DailyTrendChart />
-                <ActivityTimeline />
             </motion.div>
 
             {/* ── 6. Detail Table ────────────────────────────────────────────────── */}

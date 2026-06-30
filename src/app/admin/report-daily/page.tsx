@@ -4,45 +4,41 @@
  * /admin/report-daily — Report Daily Page
  * ─────────────────────────────────────────────────────────────────────────────
  * Daily Operational Performance Dashboard with three tabs:
- *   Transport | Warehouse FG | Warehouse BS
+ *   Transport    | Warehouse FG | Warehouse BS
  *
- * Design System (Light Mode):
- *   Background : #F5F7FB   Primary  : #DC2626
- *   Card       : #FFFFFF   Secondary: #2563EB
- *   Border     : #E5E7EB   Success  : #16A34A
- *   Text       : #111827   Warning  : #F59E0B
- *   Muted      : #64748B   Radius   : 18px
+ * Transport tab:
+ *   - Chart: Gantungan Volume vs Count DO
+ *   - Table: TransportPivotTable (rows = Jenis Report, columns = Tanggal)
+ *     Title: "Detail Report"
  *
- * Structure per tab:
- *   Transport    : Chart (Gantungan Volume vs Count DO)  →  Table
- *   Warehouse FG : Chart (Jam Pulang vs Qty Picking)    →  Table
- *   Warehouse BS : Chart 1 (In/Out Bad Stock)
- *                  Chart 2 (Trend Stock On Hand)         →  Table
+ * Warehouse FG tab:
+ *   - Chart: Jam Pulang vs Qty Picking
+ *   - Table: DailyTable
  *
- * Filters: NOT on this page — they live in the sidebar.
+ * Warehouse BS tab:
+ *   - Chart 1: In/Out Bad Stock (with Repack series)
+ *   - Chart 2: Trend Stock On Hand
+ *   - Table: DailyTable
  */
 
 import { useCallback } from "react";
 import { motion, AnimatePresence, type Variants } from "framer-motion";
 import dynamic from "next/dynamic";
 
-// ── Hook ───────────────────────────────────────────────────────────────────────
 import { useReportDaily } from "@/hooks/useReportDaily";
+import { transportRecords } from "@/mock/reportDaily";
 
-// ── Segment tabs (lightweight — above the fold) ────────────────────────────────
 import SegmentTabs from "@/components/report-daily/SegmentTabs";
-
-// ── Table (static — always visible) ───────────────────────────────────────────
 import DailyTable from "@/components/report-daily/DailyTable";
+import TransportPivotTable from "@/components/report-daily/TransportPivotTable";
 
-// ── Charts — lazy loaded for code splitting ────────────────────────────────────
 const TransportChart = dynamic(
     () => import("@/components/report-daily/TransportChart"),
     { ssr: false, loading: () => <ChartSkeleton height={320} /> }
 );
 const WarehouseFGChart = dynamic(
     () => import("@/components/report-daily/WarehouseFGChart"),
-    { ssr: false, loading: () => <ChartSkeleton height={320} /> }
+    { ssr: false, loading: () => <ChartSkeleton height={400} /> }
 );
 const WarehouseBSChart = dynamic(
     () => import("@/components/report-daily/WarehouseBSChart"),
@@ -53,8 +49,6 @@ const StockOnHandChart = dynamic(
     { ssr: false, loading: () => <ChartSkeleton height={290} /> }
 );
 
-// ─── Chart loading placeholder ─────────────────────────────────────────────────
-
 function ChartSkeleton({ height = 300 }: { height?: number }) {
     return (
         <div
@@ -64,23 +58,11 @@ function ChartSkeleton({ height = 300 }: { height?: number }) {
     );
 }
 
-// ─── Tab content fade animation ────────────────────────────────────────────────
-
 const tabVariants: Variants = {
     hidden: { opacity: 0, y: 10 },
     visible: { opacity: 1, y: 0, transition: { duration: 0.28 } },
     exit: { opacity: 0, y: -6, transition: { duration: 0.16 } },
 };
-
-// ─── Table title per tab ───────────────────────────────────────────────────────
-
-const TABLE_TITLES = {
-    "transport": "Informasi Detail Laporan Harian Transport",
-    "warehouse-fg": "Informasi Detail Laporan Harian Warehouse FG",
-    "warehouse-bs": "Informasi Detail Laporan Harian Warehouse BS",
-} as const;
-
-// ─── Page ──────────────────────────────────────────────────────────────────────
 
 export default function ReportDailyPage() {
     const {
@@ -110,7 +92,7 @@ export default function ReportDailyPage() {
     return (
         <div className="space-y-5">
 
-            {/* ── Page Header ────────────────────────────────────────────────────── */}
+            {/* ── Page Header ─────────────────────────────────────────────────── */}
             <div>
                 <h1 className="text-xl font-bold text-[#111827] leading-tight">
                     Report Daily
@@ -122,12 +104,13 @@ export default function ReportDailyPage() {
                 </p>
             </div>
 
-            {/* ── Segment Tabs ───────────────────────────────────────────────────── */}
+            {/* ── Segment Tabs ────────────────────────────────────────────────── */}
             <SegmentTabs active={activeTab} onChange={handleTabChange} />
 
-            {/* ── Tab Content ────────────────────────────────────────────────────── */}
+            {/* ── Tab Content ─────────────────────────────────────────────────── */}
             <AnimatePresence mode="wait" initial={false}>
-                {/* ─ Transport ─────────────────────────────────────────────────────── */}
+
+                {/* ── Transport tab ─────────────────────────────────────────────── */}
                 {activeTab === "transport" && (
                     <motion.div
                         key="transport"
@@ -138,26 +121,16 @@ export default function ReportDailyPage() {
                         className="space-y-5"
                     >
                         <TransportChart />
-                        <DailyTable
-                            title={TABLE_TITLES["transport"]}
-                            paginated={paginated}
-                            totalRecords={totalRecords}
-                            page={page}
-                            pageSize={pageSize}
-                            totalPages={totalPages}
-                            sort={sort}
-                            search={search}
-                            onSort={handleSort}
-                            onPageChange={setPage}
-                            onPageSizeChange={setPageSize}
-                            onSearchChange={handleSearchChange}
-                            onExport={handleExport}
-                            onRefresh={handleRefresh}
-                        />
+                        {/*
+                         * Pivot table: rows = Jenis Report, columns = Tanggal
+                         * Uses the full transportRecords (not paginated) so all
+                         * date columns are always visible.
+                         */}
+                        <TransportPivotTable records={transportRecords} />
                     </motion.div>
                 )}
 
-                {/* ─ Warehouse FG ──────────────────────────────────────────────────── */}
+                {/* ── Warehouse FG tab ─────────────────────────────────────────── */}
                 {activeTab === "warehouse-fg" && (
                     <motion.div
                         key="warehouse-fg"
@@ -169,7 +142,7 @@ export default function ReportDailyPage() {
                     >
                         <WarehouseFGChart />
                         <DailyTable
-                            title={TABLE_TITLES["warehouse-fg"]}
+                            title="Informasi Detail Laporan Harian Warehouse FG"
                             paginated={paginated}
                             totalRecords={totalRecords}
                             page={page}
@@ -187,7 +160,7 @@ export default function ReportDailyPage() {
                     </motion.div>
                 )}
 
-                {/* ─ Warehouse BS ──────────────────────────────────────────────────── */}
+                {/* ── Warehouse BS tab ─────────────────────────────────────────── */}
                 {activeTab === "warehouse-bs" && (
                     <motion.div
                         key="warehouse-bs"
@@ -197,13 +170,12 @@ export default function ReportDailyPage() {
                         exit="exit"
                         className="space-y-5"
                     >
-                        {/* Two charts side by side on lg, stacked on mobile */}
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                             <WarehouseBSChart />
                             <StockOnHandChart />
                         </div>
                         <DailyTable
-                            title={TABLE_TITLES["warehouse-bs"]}
+                            title="Informasi Detail Laporan Harian Warehouse BS"
                             paginated={paginated}
                             totalRecords={totalRecords}
                             page={page}
@@ -221,7 +193,6 @@ export default function ReportDailyPage() {
                     </motion.div>
                 )}
             </AnimatePresence>
-
         </div>
     );
 }

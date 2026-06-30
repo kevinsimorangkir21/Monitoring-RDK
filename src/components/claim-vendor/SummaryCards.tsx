@@ -9,6 +9,12 @@ import { motion } from "framer-motion";
 import { TrendingUp, TrendingDown, Receipt, Clock, CheckCircle2, XCircle, type LucideIcon } from "lucide-react";
 import { KPI } from "@/mock/claimVendor";
 
+function fmtRpCompact(v: number): string {
+    if (v >= 1_000_000_000) return `${(v / 1_000_000_000).toFixed(1)}B`;
+    if (v >= 1_000_000) return `${(v / 1_000_000).toFixed(0)}M`;
+    return v.toLocaleString("id-ID");
+}
+
 // ─── Count-up hook ────────────────────────────────────────────────────────────
 
 function useCountUp(target: number, duration = 1000): number {
@@ -32,6 +38,7 @@ function useCountUp(target: number, duration = 1000): number {
 interface CardProps {
     title: string;
     numericValue: number;
+    displayValue?: string;    // pre-formatted string (overrides count-up)
     percentChange: number;
     icon: LucideIcon;
     iconBg: string;
@@ -42,11 +49,12 @@ interface CardProps {
 }
 
 const SummaryCard = memo(function SummaryCard({
-    title, numericValue, percentChange,
+    title, numericValue, displayValue, percentChange,
     icon: Icon, iconBg, iconColor, valueColor, accentBorder, delay = 0,
 }: CardProps) {
     const count = useCountUp(numericValue);
     const isUp = percentChange >= 0;
+    const shownValue = displayValue ?? count.toLocaleString("id-ID");
 
     return (
         <motion.div
@@ -60,7 +68,7 @@ const SummaryCard = memo(function SummaryCard({
                 <div className="min-w-0">
                     <p className="text-xs font-medium text-[#64748B] mb-1">{title}</p>
                     <p className={`text-2xl font-bold leading-none ${valueColor}`}>
-                        {count.toLocaleString("id-ID")}
+                        {shownValue}
                     </p>
                     <div className={`flex items-center gap-1 mt-2 text-xs font-semibold ${isUp ? "text-emerald-600" : "text-red-500"}`}>
                         {isUp ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
@@ -80,9 +88,11 @@ const SummaryCard = memo(function SummaryCard({
 export default function SummaryCards() {
     return (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {/* Card 1 — Total Nilai Claim */}
             <SummaryCard
-                title="Total Claim"
-                numericValue={KPI.totalClaim}
+                title="Total Nilai Claim"
+                numericValue={KPI.totalNilai}
+                displayValue={`Rp ${fmtRpCompact(KPI.totalNilai)}`}
                 percentChange={+8.4}
                 icon={Receipt}
                 iconBg="bg-blue-50"
@@ -91,9 +101,11 @@ export default function SummaryCards() {
                 accentBorder="border-l-blue-500"
                 delay={0}
             />
+            {/* Card 2 — Nilai Waiting Approval (total - approved) */}
             <SummaryCard
-                title="Waiting Approval"
-                numericValue={KPI.waitingApproval}
+                title="Nilai Waiting"
+                numericValue={KPI.totalNilai - KPI.approvedNilai}
+                displayValue={`Rp ${fmtRpCompact(KPI.totalNilai - KPI.approvedNilai)}`}
                 percentChange={+2.1}
                 icon={Clock}
                 iconBg="bg-amber-50"
@@ -102,9 +114,11 @@ export default function SummaryCards() {
                 accentBorder="border-l-amber-500"
                 delay={0.06}
             />
+            {/* Card 3 — Nilai Approved (Payment) */}
             <SummaryCard
-                title="Approved"
-                numericValue={KPI.approved}
+                title="Nilai Approved"
+                numericValue={KPI.approvedNilai}
+                displayValue={`Rp ${fmtRpCompact(KPI.approvedNilai)}`}
                 percentChange={+5.3}
                 icon={CheckCircle2}
                 iconBg="bg-emerald-50"
@@ -113,9 +127,11 @@ export default function SummaryCards() {
                 accentBorder="border-l-emerald-500"
                 delay={0.12}
             />
+            {/* Card 4 — Approval Rate % */}
             <SummaryCard
-                title="Rejected"
-                numericValue={KPI.rejected}
+                title="Approval Rate"
+                numericValue={Math.round(KPI.approvalRate)}
+                displayValue={`${KPI.approvalRate.toFixed(1)}%`}
                 percentChange={-1.8}
                 icon={XCircle}
                 iconBg="bg-red-50"

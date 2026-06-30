@@ -45,6 +45,15 @@ export interface BadStockItem {
     tanggal: string;
     masuk: number;   // stock in
     keluar: number;  // stock out
+    repack: number;  // repack
+}
+
+// ─── Transport Pivot ──────────────────────────────────────────────────────────
+
+/** One row in the transport pivot table (jenisReport × tanggal) */
+export interface TransportPivotRow {
+    jenisReport: string;
+    [tanggal: string]: string | number; // dynamic date columns
 }
 
 export interface StockOnHandItem {

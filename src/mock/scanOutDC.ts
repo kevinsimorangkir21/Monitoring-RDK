@@ -37,14 +37,15 @@ export const hourlyScanData: HourlyScanItem[] = [
     { jam: "16:00", total: 29 },
 ];
 
-// ─── Chart: Scan Out by DC ────────────────────────────────────────────────────
+// ─── Chart: Scan Out by Vendor ────────────────────────────────────────────────
+// (previously "by DC" — renamed to Vendor)
 
 export const dcData: DCItem[] = [
-    { dc: "DC Jakarta", total: 234 },
-    { dc: "DC Surabaya", total: 187 },
-    { dc: "DC Bandung", total: 156 },
-    { dc: "DC Semarang", total: 142 },
-    { dc: "DC Medan", total: 128 },
+    { dc: "PT Maju Bersama", total: 234 },
+    { dc: "CV Sinar Jaya", total: 187 },
+    { dc: "PT Logistik Prima", total: 156 },
+    { dc: "UD Karya Agung", total: 142 },
+    { dc: "CV Delta Cargo", total: 128 },
 ];
 
 // ─── Chart: Success vs Failed ─────────────────────────────────────────────────
@@ -55,16 +56,18 @@ export const successRateData: SuccessRateItem[] = [
     { name: "Failed", value: 4, color: "#DC2626" },
 ];
 
-// ─── Chart: Daily Trend ───────────────────────────────────────────────────────
+// ─── Chart: Average Jam Scan Out (kendaraan sebelum 10:00) ───────────────────
+// Hanya kendaraan yang scan out sebelum jam 10:00 pagi.
+// avg per hari dihitung dari data record (jam dalam format "HH:MM").
 
 export const dailyTrendData: DailyTrendItem[] = [
-    { tanggal: "20 Jun", total: 620 },
-    { tanggal: "21 Jun", total: 780 },
-    { tanggal: "22 Jun", total: 710 },
-    { tanggal: "23 Jun", total: 850 },
-    { tanggal: "24 Jun", total: 920 },
-    { tanggal: "25 Jun", total: 680 },
-    { tanggal: "26 Jun", total: 847 },
+    { tanggal: "20 Jun", avgJamScanOut: 7.62 },  // 07:37
+    { tanggal: "21 Jun", avgJamScanOut: 7.85 },  // 07:51
+    { tanggal: "22 Jun", avgJamScanOut: 7.40 },  // 07:24
+    { tanggal: "23 Jun", avgJamScanOut: 8.10 },  // 08:06
+    { tanggal: "24 Jun", avgJamScanOut: 7.93 },  // 07:56
+    { tanggal: "25 Jun", avgJamScanOut: 7.55 },  // 07:33
+    { tanggal: "26 Jun", avgJamScanOut: 7.94 },  // 07:56
 ];
 
 // ─── Activity Timeline ────────────────────────────────────────────────────────

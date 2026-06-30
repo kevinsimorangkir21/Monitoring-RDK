@@ -55,12 +55,18 @@ export interface ClaimTrendItem {
     total: number;
     approved: number;
     rejected: number;
+    // value-based fields (IDR)
+    totalNilai: number;
+    approvedNilai: number;
+    rejectedNilai: number;
 }
 
 export interface ClaimByVendorItem {
     vendor: string;
     total: number;
-    nilai: number;
+    nilai: number;          // total claim nilai
+    paymentNilai: number;   // approved nilai
+    outstandingNilai: number; // nilai - paymentNilai
 }
 
 export interface ClaimByCategoryItem {

@@ -58,7 +58,7 @@ export interface SuccessRateItem {
 
 export interface DailyTrendItem {
     tanggal: string;
-    total: number;
+    avgJamScanOut: number; // decimal hours, e.g. 7.94 = 07:56
 }
 
 // ─── Activity timeline ────────────────────────────────────────────────────────

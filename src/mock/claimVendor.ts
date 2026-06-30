@@ -21,27 +21,27 @@ export const KPI: ClaimKPI = {
     rejectionRate: 11.7,
 };
 
-// ─── Chart: Claim Trend ───────────────────────────────────────────────────────
+// ─── Chart: Claim Trend (Value-based) ────────────────────────────────────────
 
 export const claimTrendData: ClaimTrendItem[] = [
-    { tanggal: "22 Jun", total: 14, approved: 8, rejected: 2 },
-    { tanggal: "23 Jun", total: 18, approved: 11, rejected: 3 },
-    { tanggal: "24 Jun", total: 12, approved: 7, rejected: 1 },
-    { tanggal: "25 Jun", total: 22, approved: 14, rejected: 4 },
-    { tanggal: "26 Jun", total: 16, approved: 10, rejected: 2 },
-    { tanggal: "27 Jun", total: 24, approved: 15, rejected: 3 },
-    { tanggal: "28 Jun", total: 22, approved: 14, rejected: 0 },
+    { tanggal: "22 Jun", total: 14, approved: 8, rejected: 2, totalNilai: 520_000_000, approvedNilai: 340_000_000, rejectedNilai: 75_000_000 },
+    { tanggal: "23 Jun", total: 18, approved: 11, rejected: 3, totalNilai: 720_000_000, approvedNilai: 465_000_000, rejectedNilai: 112_500_000 },
+    { tanggal: "24 Jun", total: 12, approved: 7, rejected: 1, totalNilai: 485_000_000, approvedNilai: 310_000_000, rejectedNilai: 43_250_000 },
+    { tanggal: "25 Jun", total: 22, approved: 14, rejected: 4, totalNilai: 890_000_000, approvedNilai: 595_000_000, rejectedNilai: 145_000_000 },
+    { tanggal: "26 Jun", total: 16, approved: 10, rejected: 2, totalNilai: 645_000_000, approvedNilai: 423_000_000, rejectedNilai: 87_500_000 },
+    { tanggal: "27 Jun", total: 24, approved: 15, rejected: 3, totalNilai: 960_000_000, approvedNilai: 640_000_000, rejectedNilai: 130_750_000 },
+    { tanggal: "28 Jun", total: 22, approved: 14, rejected: 0, totalNilai: 852_500_000, approvedNilai: 555_750_000, rejectedNilai: 0 },
 ];
 
-// ─── Chart: Claim by Vendor ───────────────────────────────────────────────────
+// ─── Chart: Claim by Vendor (grouped bar: Total, Payment, Outstanding) ────────
 
 export const claimByVendorData: ClaimByVendorItem[] = [
-    { vendor: "PT Maju Bersama", total: 28, nilai: 1_240_000_000 },
-    { vendor: "CV Sinar Jaya", total: 22, nilai: 980_500_000 },
-    { vendor: "PT Logistik Prima", total: 19, nilai: 874_000_000 },
-    { vendor: "UD Karya Agung", total: 16, nilai: 720_000_000 },
-    { vendor: "PT Trans Nusantara", total: 14, nilai: 612_500_000 },
-    { vendor: "CV Delta Cargo", total: 11, nilai: 445_000_000 },
+    { vendor: "PT Maju Bersama", total: 28, nilai: 1_240_000_000, paymentNilai: 820_000_000, outstandingNilai: 420_000_000 },
+    { vendor: "CV Sinar Jaya", total: 22, nilai: 980_500_000, paymentNilai: 645_000_000, outstandingNilai: 335_500_000 },
+    { vendor: "PT Logistik Prima", total: 19, nilai: 874_000_000, paymentNilai: 560_000_000, outstandingNilai: 314_000_000 },
+    { vendor: "UD Karya Agung", total: 16, nilai: 720_000_000, paymentNilai: 495_000_000, outstandingNilai: 225_000_000 },
+    { vendor: "PT Trans Nusantara", total: 14, nilai: 612_500_000, paymentNilai: 400_000_000, outstandingNilai: 212_500_000 },
+    { vendor: "CV Delta Cargo", total: 11, nilai: 445_000_000, paymentNilai: 208_750_000, outstandingNilai: 236_250_000 },
 ];
 
 // ─── Chart: Claim by Category ─────────────────────────────────────────────────

@@ -5,22 +5,23 @@
  * ─────────────────────────────────────────────────────────────────────────────
  * Sections:
  *   1. Page Header     — title, subtitle, Refresh, Export Excel, Last Update
- *   2. KPI Cards       — Total Claim | Waiting Approval | Approved | Rejected
- *   3. Charts Row 1    — Claim Trend (full width)
- *   4. Charts Row 2    — Claim by Vendor | Claim by Category | Approval Progress
+ *   2. KPI Cards       — Total Nilai | Nilai Waiting | Nilai Approved | Approval Rate
+ *   3. Claim Trend     — Area chart (Value-based, full width)
+ *   4. Claim by Vendor — Grouped bar chart (Total | Payment | Outstanding)
  *   5. Detail Table    — Enterprise data grid with drawer on Detail action
  *   6. Detail Drawer   — Full claim info + timeline + Print / Download PDF
+ *
+ * Removed per revision spec: ClaimByCategoryChart, ApprovalProgressChart,
+ *   old ClaimByVendorChart (count-based).
  */
 
 import { useState, useCallback } from "react";
 import { motion, type Variants } from "framer-motion";
 import dynamic from "next/dynamic";
 
-// ── Hook ───────────────────────────────────────────────────────────────────────
 import { useClaimVendor } from "@/hooks/useClaimVendor";
 import type { ClaimRecord } from "@/types/claimVendor";
 
-// ── Static components ──────────────────────────────────────────────────────────
 import SummaryCards from "@/components/claim-vendor/SummaryCards";
 import ClaimTable from "@/components/claim-vendor/ClaimTable";
 import RefreshButton from "@/components/claim-vendor/RefreshButton";
@@ -33,15 +34,7 @@ const ClaimTrendChart = dynamic(
 );
 const ClaimByVendorChart = dynamic(
     () => import("@/components/claim-vendor/ClaimCharts").then((m) => ({ default: m.ClaimByVendorChart })),
-    { ssr: false, loading: () => <ChartSkeleton h={284} /> }
-);
-const ClaimByCategoryChart = dynamic(
-    () => import("@/components/claim-vendor/ClaimCharts").then((m) => ({ default: m.ClaimByCategoryChart })),
-    { ssr: false, loading: () => <ChartSkeleton h={284} /> }
-);
-const ApprovalProgressChart = dynamic(
-    () => import("@/components/claim-vendor/ClaimCharts").then((m) => ({ default: m.ApprovalProgressChart })),
-    { ssr: false, loading: () => <ChartSkeleton h={284} /> }
+    { ssr: false, loading: () => <ChartSkeleton h={320} /> }
 );
 
 // ── Lazy drawer ────────────────────────────────────────────────────────────────
@@ -70,8 +63,6 @@ function lastUpdateLabel() {
         minute: "2-digit",
     });
 }
-
-// ─── Animation variants ────────────────────────────────────────────────────────
 
 const fadeUp: Variants = {
     hidden: { opacity: 0, y: 14 },
@@ -129,27 +120,19 @@ export default function ClaimVendorPage() {
                 </div>
             </motion.div>
 
-            {/* ── 2. KPI Cards ────────────────────────────────────────────────── */}
+            {/* ── 2. KPI Cards (Value-based) ───────────────────────────────────── */}
             <motion.div custom={1} initial="hidden" animate="visible" variants={fadeUp}>
                 <SummaryCards />
             </motion.div>
 
-            {/* ── 3. Claim Trend (full width) ──────────────────────────────────── */}
+            {/* ── 3. Claim Trend (full width, value-based) ─────────────────────── */}
             <motion.div custom={2} initial="hidden" animate="visible" variants={fadeUp}>
                 <ClaimTrendChart />
             </motion.div>
 
-            {/* ── 4. Charts Row 2 ─────────────────────────────────────────────── */}
-            <motion.div
-                custom={3}
-                initial="hidden"
-                animate="visible"
-                variants={fadeUp}
-                className="grid grid-cols-1 lg:grid-cols-3 gap-4"
-            >
+            {/* ── 4. Claim by Vendor (grouped bar) ────────────────────────────── */}
+            <motion.div custom={3} initial="hidden" animate="visible" variants={fadeUp}>
                 <ClaimByVendorChart />
-                <ClaimByCategoryChart />
-                <ApprovalProgressChart />
             </motion.div>
 
             {/* ── 5. Detail Table ──────────────────────────────────────────────── */}

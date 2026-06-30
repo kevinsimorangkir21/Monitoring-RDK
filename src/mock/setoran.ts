@@ -1,5 +1,5 @@
 /**
- * Setoran ke Kasir — Mock Data
+ * Setoran ke Kasir — Mock Data & Data Generator
  */
 
 import type {
@@ -21,6 +21,233 @@ function status(s: number): SetoranRecord["status"] {
     if (s <= 1800) return "Fast";
     if (s <= 3600) return "Normal";
     return "Slow";
+}
+
+// ─── SetoranDataGenerator Class ────────────────────────────────────────────────
+
+export class SetoranDataGenerator {
+    private readonly SALESMAN_NAMES = [
+        "Andi Wijaya", "Budi Santoso", "Cahyo Pramono", "Deni Kurniawan",
+        "Eka Fitriani", "Fahri Ramadan", "Gita Permata", "Hendra Gunawan",
+        "Indra Prasetya", "Joko Susilo", "Kevin Andrean", "Lina Maharani",
+        "Maman Sulaiman", "Nina Sari", "Oka Pratama", "Putri Dewi",
+        "Qori Rahman", "Rina Wati", "Sandi Kusuma", "Tari Melati",
+        "Udin Setiawan", "Vera Lestari", "Wawan Gunadi", "Xenia Puspita",
+        "Yoga Pratama", "Zulkifli Hakim"
+    ];
+
+    private readonly BASE_DURATION_MINUTES = {
+        MIN: 15,    // 15 minutes minimum
+        NORMAL: 45, // 45 minutes normal
+        MAX: 180    // 3 hours maximum
+    };
+
+    /**
+     * Generate realistic setoran data with configurable record count
+     * Requirements: 7.1, 7.2, 7.3
+     */
+    public generateSetoranData(count: number = 100): SetoranRecord[] {
+        const records: SetoranRecord[] = [];
+        const today = new Date();
+
+        // Generate data spanning the last 30 days
+        for (let i = 0; i < count; i++) {
+            // Generate date within last 30 days
+            const daysBack = Math.floor(Math.random() * 30);
+            const recordDate = new Date(today);
+            recordDate.setDate(recordDate.getDate() - daysBack);
+
+            const record = this.generateSingleRecord(i + 1, recordDate);
+            records.push(record);
+        }
+
+        // Sort by date descending (most recent first)
+        return records.sort((a, b) => b.tanggal.localeCompare(a.tanggal));
+    }
+
+    /**
+     * Generate a single realistic setoran record
+     */
+    private generateSingleRecord(index: number, date: Date): SetoranRecord {
+        const id = `S-${String(index).padStart(3, '0')}`;
+
+        // Format date strings
+        const tanggal = date.toISOString().split('T')[0]; // YYYY-MM-DD
+        const bulan = date.toLocaleDateString('id-ID', { month: 'long', year: 'numeric' });
+
+        // Random salesman
+        const namaSalesman = this.SALESMAN_NAMES[
+            Math.floor(Math.random() * this.SALESMAN_NAMES.length)
+        ];
+
+        // Generate realistic times
+        const { pulangKunjungan, setoranKasir, waktuPulang, waktuSetoran, durasiSeconds } =
+            this.generateRealisticTimes(date);
+
+        return {
+            id,
+            tanggal,
+            bulan,
+            namaSalesman,
+            pulangKunjungan,
+            setoranKasir,
+            durasiSeconds,
+            durasi: fmtDurasi(durasiSeconds),
+            status: status(durasiSeconds),
+            waktuPulang,
+            waktuSetoran
+        };
+    }
+
+    /**
+     * Generate realistic time variations for pulang kunjungan and setoran kasir
+     */
+    private generateRealisticTimes(date: Date) {
+        // Pulang kunjungan typically between 15:00 - 17:30
+        const pulangHour = 15 + Math.floor(Math.random() * 3); // 15, 16, or 17
+        const pulangMinute = Math.floor(Math.random() * 60);
+
+        // Create pulang kunjungan time
+        const pulangDate = new Date(date);
+        pulangDate.setHours(pulangHour, pulangMinute, 0, 0);
+
+        // Generate duration with realistic variations
+        // 70% normal (30-60 min), 20% fast (<30 min), 10% slow (>60 min)
+        let durationMinutes: number;
+        const rand = Math.random();
+
+        if (rand < 0.2) {
+            // Fast: 15-30 minutes
+            durationMinutes = this.BASE_DURATION_MINUTES.MIN +
+                Math.floor(Math.random() * 15);
+        } else if (rand < 0.9) {
+            // Normal: 30-60 minutes with bell curve distribution
+            const base = 45; // center at 45 minutes
+            const variation = (Math.random() + Math.random() - 1) * 15; // -15 to +15
+            durationMinutes = Math.max(30, Math.min(60, base + variation));
+        } else {
+            // Slow: 60-180 minutes
+            durationMinutes = 60 + Math.floor(Math.random() * 120);
+        }
+
+        // Calculate setoran time
+        const setoranDate = new Date(pulangDate.getTime() + durationMinutes * 60000);
+
+        const durasiSeconds = durationMinutes * 60;
+
+        return {
+            pulangKunjungan: pulangDate.toTimeString().substring(0, 5), // HH:mm
+            setoranKasir: setoranDate.toTimeString().substring(0, 5), // HH:mm
+            waktuPulang: pulangDate.toISOString(),
+            waktuSetoran: setoranDate.toISOString(),
+            durasiSeconds
+        };
+    }
+
+    /**
+     * Generate data for specific salesman with controlled variations
+     */
+    public generateForSalesman(salesmanNames: string[], recordsPerSalesman: number = 10): SetoranRecord[] {
+        const records: SetoranRecord[] = [];
+        let idCounter = 1;
+
+        salesmanNames.forEach(namaSalesman => {
+            for (let i = 0; i < recordsPerSalesman; i++) {
+                const daysBack = Math.floor(Math.random() * 30);
+                const recordDate = new Date();
+                recordDate.setDate(recordDate.getDate() - daysBack);
+
+                const record = this.generateSingleRecord(idCounter++, recordDate);
+                record.namaSalesman = namaSalesman; // Override with specific salesman
+                records.push(record);
+            }
+        });
+
+        return records.sort((a, b) => b.tanggal.localeCompare(a.tanggal));
+    }
+
+    /**
+     * Generate data for a specific date range
+     */
+    public generateDateRange(startDate: Date, endDate: Date, recordsPerDay: number = 5): SetoranRecord[] {
+        const records: SetoranRecord[] = [];
+        let idCounter = 1;
+
+        const currentDate = new Date(startDate);
+
+        while (currentDate <= endDate) {
+            for (let i = 0; i < recordsPerDay; i++) {
+                const record = this.generateSingleRecord(idCounter++, new Date(currentDate));
+                records.push(record);
+            }
+            currentDate.setDate(currentDate.getDate() + 1);
+        }
+
+        return records.sort((a, b) => b.tanggal.localeCompare(a.tanggal));
+    }
+
+    /**
+     * Generate edge cases for testing (very short and long durations)
+     */
+    public generateEdgeCases(): SetoranRecord[] {
+        const records: SetoranRecord[] = [];
+        const today = new Date();
+
+        // Very fast cases (5-15 minutes)
+        for (let i = 0; i < 3; i++) {
+            const date = new Date(today);
+            date.setDate(date.getDate() - i);
+
+            const record = this.generateSingleRecord(900 + i, date);
+            // Override with very short duration
+            const pulangDate = new Date(date);
+            pulangDate.setHours(16, 0, 0, 0);
+            const shortDuration = 5 + Math.floor(Math.random() * 10); // 5-15 minutes
+            const setoranDate = new Date(pulangDate.getTime() + shortDuration * 60000);
+
+            record.pulangKunjungan = pulangDate.toTimeString().substring(0, 5);
+            record.setoranKasir = setoranDate.toTimeString().substring(0, 5);
+            record.durasiSeconds = shortDuration * 60;
+            record.durasi = fmtDurasi(record.durasiSeconds);
+            record.status = status(record.durasiSeconds);
+            record.waktuPulang = pulangDate.toISOString();
+            record.waktuSetoran = setoranDate.toISOString();
+
+            records.push(record);
+        }
+
+        // Very slow cases (3-5 hours)
+        for (let i = 0; i < 3; i++) {
+            const date = new Date(today);
+            date.setDate(date.getDate() - (i + 10));
+
+            const record = this.generateSingleRecord(950 + i, date);
+            // Override with very long duration
+            const pulangDate = new Date(date);
+            pulangDate.setHours(15, 30, 0, 0);
+            const longDuration = 180 + Math.floor(Math.random() * 120); // 3-5 hours
+            const setoranDate = new Date(pulangDate.getTime() + longDuration * 60000);
+
+            record.pulangKunjungan = pulangDate.toTimeString().substring(0, 5);
+            record.setoranKasir = setoranDate.toTimeString().substring(0, 5);
+            record.durasiSeconds = longDuration * 60;
+            record.durasi = fmtDurasi(record.durasiSeconds);
+            record.status = status(record.durasiSeconds);
+            record.waktuPulang = pulangDate.toISOString();
+            record.waktuSetoran = setoranDate.toISOString();
+
+            records.push(record);
+        }
+
+        return records;
+    }
+
+    /**
+     * Get available salesman names for dropdowns
+     */
+    public getAvailableSalesman(): string[] {
+        return [...this.SALESMAN_NAMES];
+    }
 }
 
 // ─── Raw records ──────────────────────────────────────────────────────────────
@@ -102,3 +329,11 @@ export const BULAN_OPTIONS = ["Juni 2025", "Mei 2025", "April 2025"];
 export const TANGGAL_OPTIONS = [
     ...new Set(setoranRecords.map((r) => r.tanggal)),
 ].sort((a, b) => b.localeCompare(a));
+
+export const SALESMAN_OPTIONS = [
+    ...new Set(setoranRecords.map((r) => r.namaSalesman)),
+].sort();
+
+// ─── Data Generator Instance ──────────────────────────────────────────────────
+
+export const setoranDataGenerator = new SetoranDataGenerator();

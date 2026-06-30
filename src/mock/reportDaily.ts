@@ -54,13 +54,13 @@ export const jamPulangPickingData: JamPulangPickingItem[] = [
 // ─── Warehouse BS: In dan Out Bad Stock ──────────────────────────────────────
 
 export const badStockData: BadStockItem[] = [
-    { tanggal: "20 Jun", masuk: 120, keluar: 85 },
-    { tanggal: "21 Jun", masuk: 95, keluar: 110 },
-    { tanggal: "22 Jun", masuk: 145, keluar: 92 },
-    { tanggal: "23 Jun", masuk: 88, keluar: 130 },
-    { tanggal: "24 Jun", masuk: 160, keluar: 105 },
-    { tanggal: "25 Jun", masuk: 72, keluar: 68 },
-    { tanggal: "26 Jun", masuk: 108, keluar: 95 },
+    { tanggal: "20 Jun", masuk: 120, keluar: 85, repack: 42 },
+    { tanggal: "21 Jun", masuk: 95, keluar: 110, repack: 30 },
+    { tanggal: "22 Jun", masuk: 145, keluar: 92, repack: 55 },
+    { tanggal: "23 Jun", masuk: 88, keluar: 130, repack: 28 },
+    { tanggal: "24 Jun", masuk: 160, keluar: 105, repack: 62 },
+    { tanggal: "25 Jun", masuk: 72, keluar: 68, repack: 21 },
+    { tanggal: "26 Jun", masuk: 108, keluar: 95, repack: 38 },
 ];
 
 // ─── Warehouse BS: Trend Stock On Hand ───────────────────────────────────────

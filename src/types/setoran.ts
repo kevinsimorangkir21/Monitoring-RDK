@@ -59,4 +59,27 @@ export interface SetoranFilter {
     search: string;
     bulan: string;
     tanggal: string;
+    dateFrom: string;   // "YYYY-MM-DD" or ""
+    dateTo: string;     // "YYYY-MM-DD" or ""
+}
+
+// ─── Chart types — derived from filtered records ──────────────────────────────
+
+export interface DailyAverageItem {
+    tanggal: string;        // "YYYY-MM-DD"
+    tanggalLabel: string;   // "28 Jun"
+    avgMinutes: number;     // average duration in minutes (rounded to 1 dp)
+}
+
+export interface SalesmanAvgItem {
+    salesman: string;
+    avgMinutes: number;
+    durasiFormatted: string;  // "mm:ss" or "H:mm:ss"
+}
+
+export interface DistribusiItem {
+    label: string;
+    value: number;
+    color: string;
+    pct: number;
 }

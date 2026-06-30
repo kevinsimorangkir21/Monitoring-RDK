@@ -52,6 +52,7 @@ export interface DailyTrendItem {
     ZWP2: number;
     ZWP4: number;
     ZWP5: number;
+    globalWoWt: number;  // global WO-WT average line
 }
 
 export interface ComparisonItem {

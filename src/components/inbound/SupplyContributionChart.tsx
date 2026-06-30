@@ -11,7 +11,7 @@ import {
     XAxis, YAxis, CartesianGrid,
     Tooltip, ResponsiveContainer,
 } from "recharts";
-import { kontribusiSupplyData } from "@/mock/inbound";
+import { bongkaranByPlantData } from "@/mock/inbound";
 import type { KontribusiSupplyItem } from "@/types/inbound";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -52,7 +52,7 @@ const BAR_ACTIVE = "#D97706";
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function SupplyContributionChart() {
-    const data = kontribusiSupplyData;
+    const data = bongkaranByPlantData;
 
     if (!data.length) {
         return (
@@ -60,7 +60,7 @@ export default function SupplyContributionChart() {
                 className="bg-white border border-[#E5E7EB] rounded-[18px] p-5 shadow-sm flex items-center justify-center"
                 style={{ height: 320 }}
             >
-                <p className="text-sm text-[#9CA3AF]">Belum ada data kontribusi supply.</p>
+                <p className="text-sm text-[#9CA3AF]">Belum ada data bongkaran by plant.</p>
             </div>
         );
     }
@@ -72,8 +72,8 @@ export default function SupplyContributionChart() {
         >
             {/* Header */}
             <div className="mb-3 shrink-0">
-                <p className="text-sm font-semibold text-[#111827]">Kontribusi Supply</p>
-                <p className="text-xs text-[#64748B]">Jumlah mobil inbound berdasarkan plant supply</p>
+                <p className="text-sm font-semibold text-[#111827]">Bongkaran by Plant</p>
+                <p className="text-xs text-[#64748B]">Jumlah mobil inbound berdasarkan plant</p>
             </div>
 
             {/* Chart */}

@@ -7,6 +7,7 @@ import type {
     FakturKPI,
     NominalHarianItem,
     DokumenHarianItem,
+    NominalDokumenItem,
     NominalPerVendorItem,
     DistribusiNominalItem,
 } from "@/types/gantunganFaktur";
@@ -42,6 +43,18 @@ export const dokumenHarianData: DokumenHarianItem[] = [
     { tanggal: "26 Jun", jumlah: 38 },
     { tanggal: "27 Jun", jumlah: 31 },
     { tanggal: "28 Jun", jumlah: 38 },
+];
+
+// ─── Chart: Nominal + Dokumen Harian (Combined ComposedChart) ────────────────
+
+export const nominalDokumenData: NominalDokumenItem[] = [
+    { tanggal: "22 Jun", nominal: 1_120_000_000, jumlah: 28 },
+    { tanggal: "23 Jun", nominal: 980_500_000, jumlah: 24 },
+    { tanggal: "24 Jun", nominal: 1_345_000_000, jumlah: 34 },
+    { tanggal: "25 Jun", nominal: 870_250_000, jumlah: 21 },
+    { tanggal: "26 Jun", nominal: 1_540_000_000, jumlah: 38 },
+    { tanggal: "27 Jun", nominal: 1_230_750_000, jumlah: 31 },
+    { tanggal: "28 Jun", nominal: 1_260_750_000, jumlah: 38 },
 ];
 
 // ─── Chart: Nominal per Vendor ────────────────────────────────────────────────
