@@ -9,7 +9,14 @@ import (
 
 // RoleMiddleware enforces that the authenticated user holds the SUPER_ADMIN role.
 // It must be placed after AuthMiddleware, which stores *utils.Claims in context.
+// OPTIONS requests are always passed through to allow CORS preflight.
 func RoleMiddleware(c *gin.Context) {
+	// Pass through preflight requests — CORS middleware handles them.
+	if c.Request.Method == "OPTIONS" {
+		c.Next()
+		return
+	}
+
 	raw, exists := c.Get("claims")
 	if !exists {
 		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{

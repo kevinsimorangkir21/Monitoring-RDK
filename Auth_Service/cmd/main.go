@@ -3,8 +3,10 @@ package main
 import (
 	"fmt"
 	"log"
+	"net/http"
 	"runtime"
 	"strings"
+	"time"
 
 	"github.com/VYN2/Auth_Service/config"
 	"github.com/VYN2/Auth_Service/controllers"
@@ -31,41 +33,74 @@ func main() {
 	// ── 2. Load config (exits on missing required vars) ───────────────────────
 	config.Load()
 
-	// ── 3. Connect MySQL (with retry) + AutoMigrate ───────────────────────────
-	// database.Connect() prints connection details and retries before failing.
+	// ── 3. Log CORS config so Railway logs show the parsed origins ────────────
+	fmt.Println("  Raw CORS    :", config.AppConfig.CORSOrigins)
+	parsedOrigins := strings.Split(config.AppConfig.CORSOrigins, ",")
+	for i, o := range parsedOrigins {
+		parsedOrigins[i] = strings.TrimSpace(o)
+	}
+	fmt.Printf("  Parsed CORS : %#v\n", parsedOrigins)
+
+	// ── 4. Connect MySQL (with retry) + AutoMigrate ───────────────────────────
 	database.Connect()
 	fmt.Println("  Database Connected")
 	fmt.Println("  Auto Migration Success")
 
-	// ── 4. Run Seeder ─────────────────────────────────────────────────────────
+	// ── 5. Run Seeder ─────────────────────────────────────────────────────────
 	seeders.Seed(database.DB)
 	fmt.Println("  Seeder Success")
 
-	// ── 5. Wire dependencies ──────────────────────────────────────────────────
+	// ── 6. Wire dependencies ──────────────────────────────────────────────────
 	userRepo := repositories.NewGormUserRepository(database.DB)
 	authSvc := services.NewAuthService(userRepo)
 	authCtrl := controllers.NewAuthController(authSvc)
 
-	// ── 6. Create Gin engine and register CORS middleware ─────────────────────
-	gin.SetMode(gin.ReleaseMode) // suppress Gin debug noise; routes are printed below
+	// ── 7. Create Gin engine ──────────────────────────────────────────────────
+	gin.SetMode(gin.ReleaseMode)
 	r := gin.Default()
 
-	corsOrigins := strings.Split(config.AppConfig.CORSOrigins, ",")
-	r.Use(cors.New(cors.Config{
-		AllowOrigins:     corsOrigins,
-		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
-		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization", "Accept"},
+	// ── 8. Request logger — placed BEFORE CORS middleware ────────────────────
+	r.Use(func(c *gin.Context) {
+		fmt.Println("================================")
+		fmt.Println("METHOD :", c.Request.Method)
+		fmt.Println("PATH   :", c.Request.URL.Path)
+		fmt.Println("ORIGIN :", c.Request.Header.Get("Origin"))
+		fmt.Println("================================")
+		c.Next()
+	})
+
+	// ── 9. CORS middleware — production-ready for Railway + Netlify ───────────
+	corsConfig := cors.Config{
+		AllowOrigins: parsedOrigins,
+		AllowMethods: []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
+		AllowHeaders: []string{
+			"Origin",
+			"Content-Type",
+			"Content-Length",
+			"Accept-Encoding",
+			"X-CSRF-Token",
+			"Authorization",
+			"Accept",
+		},
 		ExposeHeaders:    []string{"Content-Length"},
 		AllowCredentials: true,
-	}))
+		MaxAge:           12 * time.Hour,
+	}
+	r.Use(cors.New(corsConfig))
 
-	// ── 7. Register routes ────────────────────────────────────────────────────
+	// ── 10. Global OPTIONS handler — ensures all preflight requests are answered
+	// before reaching any route-level or group-level middleware.
+	r.OPTIONS("/*path", func(c *gin.Context) {
+		c.Status(http.StatusNoContent)
+	})
+
+	// ── 11. Register routes ───────────────────────────────────────────────────
 	routes.Register(r, authCtrl, userRepo)
 
-	// ── 8. Print startup diagnostics ─────────────────────────────────────────
+	// ── 12. Print startup diagnostics ────────────────────────────────────────
 	printDiagnostics(r)
 
-	// ── 9. Start HTTP server ──────────────────────────────────────────────────
+	// ── 13. Start HTTP server ─────────────────────────────────────────────────
 	addr := ":" + config.AppConfig.Port
 	fmt.Printf("\n  Server Listening on %s\n\n", addr)
 	if err := r.Run(addr); err != nil {

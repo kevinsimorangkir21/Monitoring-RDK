@@ -12,8 +12,15 @@ import (
 // AuthMiddleware validates the Authorization: Bearer <token> header.
 // On success it stores the parsed *utils.Claims in the Gin context under the
 // key "claims" so that downstream handlers and RoleMiddleware can read it.
+// OPTIONS requests are always passed through to allow CORS preflight.
 func AuthMiddleware(userRepo repositories.UserRepository) gin.HandlerFunc {
 	return func(c *gin.Context) {
+		// Pass through preflight requests — CORS middleware handles them.
+		if c.Request.Method == "OPTIONS" {
+			c.Next()
+			return
+		}
+
 		authHeader := c.GetHeader("Authorization")
 		if authHeader == "" || !strings.HasPrefix(authHeader, "Bearer ") {
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
