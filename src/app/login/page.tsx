@@ -16,9 +16,19 @@ interface FormErrors {
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
+/**
+ * getApiUrl() — returns the base API URL from NEXT_PUBLIC_API_URL.
+ *
+ * The value MUST include the /api prefix, e.g.:
+ *   https://monitoring-rdk-production.up.railway.app/api
+ *   http://localhost:8080/api
+ *
+ * Returns null when the variable is missing so callers can show a config error.
+ */
 function getApiUrl(): string | null {
     const raw = process.env.NEXT_PUBLIC_API_URL;
     if (!raw || raw.trim() === '') return null;
+    // Strip trailing slash so path concatenation is always clean.
     return raw.replace(/\/+$/, '');
 }
 
