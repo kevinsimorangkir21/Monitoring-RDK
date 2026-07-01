@@ -59,9 +59,9 @@ export interface FakturFilters {
 // ─── KPI ─────────────────────────────────────────────────────────────────────
 
 export interface FakturKPIs {
-    totalNetValue: number;            // SUM of all NET VALUE
-    totalDokumen: number;             // count of records
-    averageNetValue: number;          // mean NET VALUE
+    totalNetValue: number;            // SUM of all NET VALUE (0 when empty)
+    totalDokumen: number;             // count of records (0 when empty)
+    averageNetValue: number;          // mean NET VALUE (0 when empty)
     customerTerbanyak: { name: string; count: number } | null;
 }
 

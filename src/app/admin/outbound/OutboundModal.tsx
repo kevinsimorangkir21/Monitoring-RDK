@@ -3,20 +3,22 @@
 /**
  * OutboundModal — Create / Edit modal for Outbound data.
  *
- * Fields:
- *   Tanggal | Plant | Vendor | No Polisi | Driver
- *   Status FO | Total Box | Total Qty | Jam Loading | Jam Berangkat
+ * Fields (13):
+ *   Tanggal | FREIGHT ORDER | Mobil Muat | S-TYPE | Assign Job |
+ *   JAM TERIMA | STATUS | Selesai Muat | HARI | PUTARAN |
+ *   ST | H2 | JAM RUNNING
  *
- * Validation:
- *   - All fields required
- *   - Plant must be one of: PASM, IMSM, U2, LION, TASE
- *   - Status FO must be one of: OPEN, CLOSE, CANCEL, PARTIAL
- *   - totalBox >= 0, totalQty >= 0
+ * Validation (exported pure function `validateOutboundForm`):
+ *   - All 13 fields required (trimmed value empty → "Field ini wajib diisi.")
+ *   - st as number < 0 → "ST harus bernilai 0 atau lebih."
+ *   - h2 as number < 0 → "H2 harus bernilai 0 atau lebih."
+ *   - status not in ["Muat Pagi","Muat Inap"] → "Pilih status yang valid."
+ *   - freightOrder duplicate (not own record) → "FREIGHT ORDER sudah terdaftar."
  */
 
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import React, { useState, useEffect, useCallback, useRef, memo } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { X, Truck } from "lucide-react";
+import { X } from "lucide-react";
 import type {
     OutboundRecord,
     OutboundFormValues,
@@ -26,8 +28,7 @@ import type {
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const PLANT_OPTIONS = ["PASM", "IMSM", "U2", "LION", "TASE"] as const;
-const STATUS_FO_OPTIONS = ["OPEN", "CLOSE", "CANCEL", "PARTIAL"] as const;
+const VALID_STATUSES = ["Muat Pagi", "Muat Inap"] as const;
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -35,70 +36,112 @@ function todayIso(): string {
     return new Date().toISOString().slice(0, 10);
 }
 
-const EMPTY: OutboundFormValues = {
+const EMPTY_FORM: OutboundFormValues = {
     tanggal: "",
-    plant: "",
-    vendor: "",
-    noPolisi: "",
-    driver: "",
-    statusFO: "",
-    totalBox: "",
-    totalQty: "",
-    jamLoading: "",
-    jamBerangkat: "",
+    freightOrder: "",
+    mobilMuat: "",
+    sType: "",
+    assignJob: "",
+    jamTerima: "",
+    status: "",
+    selesaiMuat: "",
+    hari: "",
+    putaran: "",
+    st: "",
+    h2: "",
+    jamRunning: "",
 };
 
 function toFormValues(r: OutboundRecord): OutboundFormValues {
     return {
         tanggal: r.tanggal,
-        plant: r.plant,
-        vendor: r.vendor,
-        noPolisi: r.noPolisi,
-        driver: r.driver,
-        statusFO: r.statusFO,
-        totalBox: String(r.totalBox),
-        totalQty: String(r.totalQty),
-        jamLoading: r.jamLoading,
-        jamBerangkat: r.jamBerangkat,
+        freightOrder: r.freightOrder,
+        mobilMuat: r.mobilMuat,
+        sType: r.sType,
+        assignJob: r.assignJob,
+        jamTerima: r.jamTerima,
+        status: r.status,
+        selesaiMuat: r.selesaiMuat,
+        hari: r.hari,
+        putaran: r.putaran,
+        st: String(r.st),
+        h2: String(r.h2),
+        jamRunning: r.jamRunning,
     };
 }
 
-// ─── Validation ───────────────────────────────────────────────────────────────
+// ─── Validation (pure, exported for testing) ─────────────────────────────────
 
-function validate(v: OutboundFormValues): OutboundFormErrors {
+/**
+ * Validates all 13 outbound form fields.
+ *
+ * @param values              - Raw form string values
+ * @param existingFreightOrders - List of already-registered FO numbers (caller
+ *                               should exclude the current record's own FO when editing)
+ * @param currentId           - The id of the record being edited (unused here —
+ *                               caller controls existingFreightOrders exclusion)
+ */
+export function validateOutboundForm(
+    values: OutboundFormValues,
+    existingFreightOrders: string[],
+    _currentId?: string
+): OutboundFormErrors {
     const errors: OutboundFormErrors = {};
 
-    if (!v.tanggal.trim()) errors.tanggal = "Tanggal harus diisi";
-    if (!v.plant.trim()) {
-        errors.plant = "Plant harus diisi";
-    } else if (!(PLANT_OPTIONS as readonly string[]).includes(v.plant)) {
-        errors.plant = "Plant tidak valid";
-    }
-    if (!v.vendor.trim()) errors.vendor = "Vendor harus diisi";
-    if (!v.noPolisi.trim()) errors.noPolisi = "No Polisi harus diisi";
-    if (!v.driver.trim()) errors.driver = "Driver harus diisi";
-    if (!v.statusFO.trim()) {
-        errors.statusFO = "Status FO harus diisi";
-    } else if (!(STATUS_FO_OPTIONS as readonly string[]).includes(v.statusFO)) {
-        errors.statusFO = "Status FO tidak valid";
+    // Required field check for every field
+    const requiredFields: Array<keyof OutboundFormValues> = [
+        "tanggal",
+        "freightOrder",
+        "mobilMuat",
+        "sType",
+        "assignJob",
+        "jamTerima",
+        "status",
+        "selesaiMuat",
+        "hari",
+        "putaran",
+        "st",
+        "h2",
+        "jamRunning",
+    ];
+
+    for (const field of requiredFields) {
+        if (!values[field].trim()) {
+            errors[field] = "Field ini wajib diisi.";
+        }
     }
 
-    if (!v.totalBox.trim()) {
-        errors.totalBox = "Total Box harus diisi";
-    } else {
-        const num = parseInt(v.totalBox, 10);
-        if (isNaN(num) || num < 0) errors.totalBox = "Total Box harus ≥ 0";
+    // ST must be a non-negative number (only if non-empty)
+    if (values.st.trim() && !errors.st) {
+        const stNum = Number(values.st);
+        if (isNaN(stNum) || stNum < 0) {
+            errors.st = "ST harus bernilai 0 atau lebih.";
+        }
     }
 
-    if (!v.totalQty.trim()) {
-        errors.totalQty = "Total Qty harus diisi";
-    } else {
-        const num = parseInt(v.totalQty, 10);
-        if (isNaN(num) || num < 0) errors.totalQty = "Total Qty harus ≥ 0";
+    // H2 must be a non-negative number (only if non-empty)
+    if (values.h2.trim() && !errors.h2) {
+        const h2Num = Number(values.h2);
+        if (isNaN(h2Num) || h2Num < 0) {
+            errors.h2 = "H2 harus bernilai 0 atau lebih.";
+        }
     }
 
-    if (!v.jamLoading.trim()) errors.jamLoading = "Jam Loading harus diisi";
-    if (!v.jamBerangkat.trim()) errors.jamBerangkat = "Jam Berangkat harus diisi";
+    // STATUS must be one of the valid enum values (only if non-empty)
+    if (values.status.trim() && !errors.status) {
+        if (!(VALID_STATUSES as readonly string[]).includes(values.status)) {
+            errors.status = "Pilih status yang valid.";
+        }
+    }
+
+    // FREIGHT ORDER uniqueness check (only if non-empty)
+    if (values.freightOrder.trim() && !errors.freightOrder) {
+        const normalizedFO = values.freightOrder.trim();
+        const normalizedExisting = existingFreightOrders.map((fo) => fo.trim());
+        if (normalizedExisting.includes(normalizedFO)) {
+            errors.freightOrder = "FREIGHT ORDER sudah terdaftar.";
+        }
+    }
 
     return errors;
 }
@@ -157,22 +200,26 @@ export interface OutboundModalProps {
     mode: CrudMode;
     record?: OutboundRecord;
     saving: boolean;
+    existingFreightOrders: string[];
+    currentId?: string;
     onSave: (values: OutboundFormValues) => Promise<void>;
     onClose: () => void;
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-export function OutboundModal({
+function OutboundModalInner({
     open,
     mode,
     record,
     saving,
+    existingFreightOrders,
+    currentId,
     onSave,
     onClose,
 }: OutboundModalProps) {
     const [values, setValues] = useState<OutboundFormValues>({
-        ...EMPTY,
+        ...EMPTY_FORM,
         tanggal: todayIso(),
     });
     const [errors, setErrors] = useState<OutboundFormErrors>({});
@@ -183,11 +230,11 @@ export function OutboundModal({
     // Reset / pre-populate on open
     useEffect(() => {
         if (!open) return;
-        setValues(
-            mode === "edit" && record
-                ? toFormValues(record)
-                : { ...EMPTY, tanggal: todayIso() }
-        );
+        if (mode === "edit" && record) {
+            setValues(toFormValues(record));
+        } else {
+            setValues({ ...EMPTY_FORM, tanggal: todayIso() });
+        }
         setErrors({});
         setSubmitting(false);
     }, [open, mode, record]);
@@ -206,7 +253,10 @@ export function OutboundModal({
         const isBusy = submitting || saving;
         const onKey = (e: KeyboardEvent) => {
             if (e.key === "Escape") {
-                if (!isBusy) { e.preventDefault(); onClose(); }
+                if (!isBusy) {
+                    e.preventDefault();
+                    onClose();
+                }
                 return;
             }
             if (e.key === "Tab" && dialogRef.current) {
@@ -245,7 +295,7 @@ export function OutboundModal({
     const handleSubmit = useCallback(
         async (e: React.FormEvent) => {
             e.preventDefault();
-            const errs = validate(values);
+            const errs = validateOutboundForm(values, existingFreightOrders, currentId);
             if (Object.keys(errs).length > 0) {
                 setErrors(errs);
                 return;
@@ -257,7 +307,7 @@ export function OutboundModal({
                 setSubmitting(false);
             }
         },
-        [values, onSave]
+        [values, existingFreightOrders, currentId, onSave]
     );
 
     const handleBackdrop = useCallback(
@@ -270,6 +320,8 @@ export function OutboundModal({
     const handleClose = useCallback(() => {
         if (!isBusy) onClose();
     }, [onClose, isBusy]);
+
+    const title = mode === "create" ? "Tambah Outbound" : "Edit Outbound";
 
     return (
         <AnimatePresence>
@@ -287,7 +339,7 @@ export function OutboundModal({
                         onClick={handleBackdrop}
                     />
 
-                    {/* Dialog wrapper */}
+                    {/* Dialog wrapper — scroll container */}
                     <motion.div
                         key="outbound-modal-dlg"
                         initial={{ opacity: 0, scale: 0.96, y: 16 }}
@@ -307,23 +359,12 @@ export function OutboundModal({
                         >
                             {/* Header */}
                             <div className="flex items-center justify-between px-6 py-4 border-b border-[#E5E7EB]">
-                                <div className="flex items-center gap-2.5">
-                                    <div className="w-8 h-8 rounded-xl bg-emerald-50 flex items-center justify-center shrink-0">
-                                        <Truck
-                                            size={16}
-                                            className="text-emerald-600"
-                                            aria-hidden="true"
-                                        />
-                                    </div>
-                                    <h2
-                                        id="outbound-modal-title"
-                                        className="text-sm font-bold text-[#111827]"
-                                    >
-                                        {mode === "create"
-                                            ? "Tambah Data Outbound"
-                                            : "Edit Data Outbound"}
-                                    </h2>
-                                </div>
+                                <h2
+                                    id="outbound-modal-title"
+                                    className="text-sm font-bold text-[#111827]"
+                                >
+                                    {title}
+                                </h2>
                                 <button
                                     ref={closeRef}
                                     type="button"
@@ -343,8 +384,8 @@ export function OutboundModal({
                                 noValidate
                                 className="px-6 py-5 space-y-4"
                             >
-                                {/* Row 1: Tanggal + Plant */}
-                                <div className="grid grid-cols-2 gap-4">
+                                {/* Row 1: Tanggal + FREIGHT ORDER */}
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                     <Field
                                         label="Tanggal"
                                         htmlFor="ob-tanggal"
@@ -354,232 +395,243 @@ export function OutboundModal({
                                             id="ob-tanggal"
                                             type="date"
                                             value={values.tanggal}
-                                            onChange={(e) =>
-                                                handleChange("tanggal", e.target.value)
-                                            }
+                                            onChange={(e) => handleChange("tanggal", e.target.value)}
                                             disabled={isBusy}
                                             required
-                                            aria-describedby={
-                                                errors.tanggal ? "ob-tanggal-error" : undefined
-                                            }
+                                            aria-describedby={errors.tanggal ? "ob-tanggal-error" : undefined}
                                             className={errors.tanggal ? IE : IN}
                                         />
                                     </Field>
                                     <Field
-                                        label="Plant"
-                                        htmlFor="ob-plant"
-                                        error={errors.plant}
-                                    >
-                                        <select
-                                            id="ob-plant"
-                                            value={values.plant}
-                                            onChange={(e) =>
-                                                handleChange("plant", e.target.value)
-                                            }
-                                            disabled={isBusy}
-                                            required
-                                            aria-describedby={
-                                                errors.plant ? "ob-plant-error" : undefined
-                                            }
-                                            className={errors.plant ? IE : IN}
-                                        >
-                                            <option value="">Pilih Plant</option>
-                                            {PLANT_OPTIONS.map((p) => (
-                                                <option key={p} value={p}>
-                                                    {p}
-                                                </option>
-                                            ))}
-                                        </select>
-                                    </Field>
-                                </div>
-
-                                {/* Row 2: Vendor + No Polisi */}
-                                <div className="grid grid-cols-2 gap-4">
-                                    <Field
-                                        label="Vendor"
-                                        htmlFor="ob-vendor"
-                                        error={errors.vendor}
+                                        label="FREIGHT ORDER"
+                                        htmlFor="ob-freightorder"
+                                        error={errors.freightOrder}
                                     >
                                         <input
-                                            id="ob-vendor"
+                                            id="ob-freightorder"
                                             type="text"
-                                            value={values.vendor}
-                                            onChange={(e) =>
-                                                handleChange("vendor", e.target.value)
-                                            }
-                                            placeholder="Nama vendor / ekspedisi"
+                                            value={values.freightOrder}
+                                            onChange={(e) => handleChange("freightOrder", e.target.value)}
+                                            placeholder="No. Freight Order"
                                             disabled={isBusy}
                                             required
-                                            aria-describedby={
-                                                errors.vendor ? "ob-vendor-error" : undefined
-                                            }
-                                            className={errors.vendor ? IE : IN}
-                                        />
-                                    </Field>
-                                    <Field
-                                        label="No Polisi"
-                                        htmlFor="ob-nopolisi"
-                                        error={errors.noPolisi}
-                                    >
-                                        <input
-                                            id="ob-nopolisi"
-                                            type="text"
-                                            value={values.noPolisi}
-                                            onChange={(e) =>
-                                                handleChange("noPolisi", e.target.value)
-                                            }
-                                            placeholder="Contoh: B 1234 XY"
-                                            disabled={isBusy}
-                                            required
-                                            aria-describedby={
-                                                errors.noPolisi ? "ob-nopolisi-error" : undefined
-                                            }
-                                            className={errors.noPolisi ? IE : IN}
+                                            aria-describedby={errors.freightOrder ? "ob-freightorder-error" : undefined}
+                                            className={errors.freightOrder ? IE : IN}
                                         />
                                     </Field>
                                 </div>
 
-                                {/* Row 3: Driver + Status FO */}
-                                <div className="grid grid-cols-2 gap-4">
+                                {/* Row 2: Mobil Muat + S-TYPE */}
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                     <Field
-                                        label="Driver"
-                                        htmlFor="ob-driver"
-                                        error={errors.driver}
+                                        label="Mobil Muat"
+                                        htmlFor="ob-mobilmuat"
+                                        error={errors.mobilMuat}
                                     >
                                         <input
-                                            id="ob-driver"
+                                            id="ob-mobilmuat"
                                             type="text"
-                                            value={values.driver}
-                                            onChange={(e) =>
-                                                handleChange("driver", e.target.value)
-                                            }
-                                            placeholder="Nama pengemudi"
+                                            value={values.mobilMuat}
+                                            onChange={(e) => handleChange("mobilMuat", e.target.value)}
+                                            placeholder="Plat kendaraan / identifikasi"
                                             disabled={isBusy}
                                             required
-                                            aria-describedby={
-                                                errors.driver ? "ob-driver-error" : undefined
-                                            }
-                                            className={errors.driver ? IE : IN}
+                                            aria-describedby={errors.mobilMuat ? "ob-mobilmuat-error" : undefined}
+                                            className={errors.mobilMuat ? IE : IN}
                                         />
                                     </Field>
                                     <Field
-                                        label="Status FO"
-                                        htmlFor="ob-statusfo"
-                                        error={errors.statusFO}
+                                        label="S-TYPE"
+                                        htmlFor="ob-stype"
+                                        error={errors.sType}
                                     >
-                                        <select
-                                            id="ob-statusfo"
-                                            value={values.statusFO}
-                                            onChange={(e) =>
-                                                handleChange("statusFO", e.target.value)
-                                            }
+                                        <input
+                                            id="ob-stype"
+                                            type="text"
+                                            value={values.sType}
+                                            onChange={(e) => handleChange("sType", e.target.value)}
+                                            placeholder="Contoh: Regular, Express"
                                             disabled={isBusy}
                                             required
-                                            aria-describedby={
-                                                errors.statusFO ? "ob-statusfo-error" : undefined
-                                            }
-                                            className={errors.statusFO ? IE : IN}
+                                            aria-describedby={errors.sType ? "ob-stype-error" : undefined}
+                                            className={errors.sType ? IE : IN}
+                                        />
+                                    </Field>
+                                </div>
+
+                                {/* Row 3: Assign Job + JAM TERIMA */}
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    <Field
+                                        label="Assign Job"
+                                        htmlFor="ob-assignjob"
+                                        error={errors.assignJob}
+                                    >
+                                        <input
+                                            id="ob-assignjob"
+                                            type="text"
+                                            value={values.assignJob}
+                                            onChange={(e) => handleChange("assignJob", e.target.value)}
+                                            placeholder="Label penugasan"
+                                            disabled={isBusy}
+                                            required
+                                            aria-describedby={errors.assignJob ? "ob-assignjob-error" : undefined}
+                                            className={errors.assignJob ? IE : IN}
+                                        />
+                                    </Field>
+                                    <Field
+                                        label="JAM TERIMA"
+                                        htmlFor="ob-jamterima"
+                                        error={errors.jamTerima}
+                                    >
+                                        <input
+                                            id="ob-jamterima"
+                                            type="time"
+                                            value={values.jamTerima}
+                                            onChange={(e) => handleChange("jamTerima", e.target.value)}
+                                            disabled={isBusy}
+                                            required
+                                            aria-describedby={errors.jamTerima ? "ob-jamterima-error" : undefined}
+                                            className={errors.jamTerima ? IE : IN}
+                                        />
+                                    </Field>
+                                </div>
+
+                                {/* Row 4: STATUS + Selesai Muat */}
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    <Field
+                                        label="STATUS"
+                                        htmlFor="ob-status"
+                                        error={errors.status}
+                                    >
+                                        <select
+                                            id="ob-status"
+                                            value={values.status}
+                                            onChange={(e) => handleChange("status", e.target.value)}
+                                            disabled={isBusy}
+                                            required
+                                            aria-describedby={errors.status ? "ob-status-error" : undefined}
+                                            className={errors.status ? IE : IN}
                                         >
-                                            <option value="">Pilih Status FO</option>
-                                            {STATUS_FO_OPTIONS.map((s) => (
+                                            <option value="">Pilih Status</option>
+                                            {VALID_STATUSES.map((s) => (
                                                 <option key={s} value={s}>
                                                     {s}
                                                 </option>
                                             ))}
                                         </select>
                                     </Field>
-                                </div>
-
-                                {/* Row 4: Total Box + Total Qty */}
-                                <div className="grid grid-cols-2 gap-4">
                                     <Field
-                                        label="Total Box"
-                                        htmlFor="ob-totalbox"
-                                        error={errors.totalBox}
+                                        label="Selesai Muat"
+                                        htmlFor="ob-selesaimuat"
+                                        error={errors.selesaiMuat}
                                     >
                                         <input
-                                            id="ob-totalbox"
-                                            type="number"
-                                            min="0"
-                                            value={values.totalBox}
-                                            onChange={(e) =>
-                                                handleChange("totalBox", e.target.value)
-                                            }
-                                            placeholder="0"
+                                            id="ob-selesaimuat"
+                                            type="time"
+                                            value={values.selesaiMuat}
+                                            onChange={(e) => handleChange("selesaiMuat", e.target.value)}
                                             disabled={isBusy}
                                             required
-                                            aria-describedby={
-                                                errors.totalBox ? "ob-totalbox-error" : undefined
-                                            }
-                                            className={errors.totalBox ? IE : IN}
-                                        />
-                                    </Field>
-                                    <Field
-                                        label="Total Qty"
-                                        htmlFor="ob-totalqty"
-                                        error={errors.totalQty}
-                                    >
-                                        <input
-                                            id="ob-totalqty"
-                                            type="number"
-                                            min="0"
-                                            value={values.totalQty}
-                                            onChange={(e) =>
-                                                handleChange("totalQty", e.target.value)
-                                            }
-                                            placeholder="0"
-                                            disabled={isBusy}
-                                            required
-                                            aria-describedby={
-                                                errors.totalQty ? "ob-totalqty-error" : undefined
-                                            }
-                                            className={errors.totalQty ? IE : IN}
+                                            aria-describedby={errors.selesaiMuat ? "ob-selesaimuat-error" : undefined}
+                                            className={errors.selesaiMuat ? IE : IN}
                                         />
                                     </Field>
                                 </div>
 
-                                {/* Row 5: Jam Loading + Jam Berangkat */}
-                                <div className="grid grid-cols-2 gap-4">
+                                {/* Row 5: HARI + PUTARAN */}
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                     <Field
-                                        label="Jam Loading"
-                                        htmlFor="ob-jamloading"
-                                        error={errors.jamLoading}
+                                        label="HARI"
+                                        htmlFor="ob-hari"
+                                        error={errors.hari}
                                     >
                                         <input
-                                            id="ob-jamloading"
-                                            type="time"
-                                            value={values.jamLoading}
-                                            onChange={(e) =>
-                                                handleChange("jamLoading", e.target.value)
-                                            }
+                                            id="ob-hari"
+                                            type="text"
+                                            value={values.hari}
+                                            onChange={(e) => handleChange("hari", e.target.value)}
+                                            placeholder="Contoh: Senin"
                                             disabled={isBusy}
                                             required
-                                            aria-describedby={
-                                                errors.jamLoading ? "ob-jamloading-error" : undefined
-                                            }
-                                            className={errors.jamLoading ? IE : IN}
+                                            aria-describedby={errors.hari ? "ob-hari-error" : undefined}
+                                            className={errors.hari ? IE : IN}
                                         />
                                     </Field>
                                     <Field
-                                        label="Jam Berangkat"
-                                        htmlFor="ob-jamberangkat"
-                                        error={errors.jamBerangkat}
+                                        label="PUTARAN"
+                                        htmlFor="ob-putaran"
+                                        error={errors.putaran}
                                     >
                                         <input
-                                            id="ob-jamberangkat"
-                                            type="time"
-                                            value={values.jamBerangkat}
-                                            onChange={(e) =>
-                                                handleChange("jamBerangkat", e.target.value)
-                                            }
+                                            id="ob-putaran"
+                                            type="text"
+                                            value={values.putaran}
+                                            onChange={(e) => handleChange("putaran", e.target.value)}
+                                            placeholder="Identifikasi ronde"
                                             disabled={isBusy}
                                             required
-                                            aria-describedby={
-                                                errors.jamBerangkat
-                                                    ? "ob-jamberangkat-error"
-                                                    : undefined
-                                            }
-                                            className={errors.jamBerangkat ? IE : IN}
+                                            aria-describedby={errors.putaran ? "ob-putaran-error" : undefined}
+                                            className={errors.putaran ? IE : IN}
+                                        />
+                                    </Field>
+                                </div>
+
+                                {/* Row 6: ST + H2 */}
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    <Field
+                                        label="ST"
+                                        htmlFor="ob-st"
+                                        error={errors.st}
+                                    >
+                                        <input
+                                            id="ob-st"
+                                            type="number"
+                                            min="0"
+                                            value={values.st}
+                                            onChange={(e) => handleChange("st", e.target.value)}
+                                            placeholder="0"
+                                            disabled={isBusy}
+                                            required
+                                            aria-describedby={errors.st ? "ob-st-error" : undefined}
+                                            className={errors.st ? IE : IN}
+                                        />
+                                    </Field>
+                                    <Field
+                                        label="H2"
+                                        htmlFor="ob-h2"
+                                        error={errors.h2}
+                                    >
+                                        <input
+                                            id="ob-h2"
+                                            type="number"
+                                            min="0"
+                                            value={values.h2}
+                                            onChange={(e) => handleChange("h2", e.target.value)}
+                                            placeholder="0"
+                                            disabled={isBusy}
+                                            required
+                                            aria-describedby={errors.h2 ? "ob-h2-error" : undefined}
+                                            className={errors.h2 ? IE : IN}
+                                        />
+                                    </Field>
+                                </div>
+
+                                {/* Row 7: JAM RUNNING (single column, full-width on mobile, half on sm+) */}
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    <Field
+                                        label="JAM RUNNING"
+                                        htmlFor="ob-jamrunning"
+                                        error={errors.jamRunning}
+                                    >
+                                        <input
+                                            id="ob-jamrunning"
+                                            type="time"
+                                            value={values.jamRunning}
+                                            onChange={(e) => handleChange("jamRunning", e.target.value)}
+                                            disabled={isBusy}
+                                            required
+                                            aria-describedby={errors.jamRunning ? "ob-jamrunning-error" : undefined}
+                                            className={errors.jamRunning ? IE : IN}
                                         />
                                     </Field>
                                 </div>
@@ -638,4 +690,5 @@ export function OutboundModal({
     );
 }
 
+export const OutboundModal = memo(OutboundModalInner);
 export default OutboundModal;

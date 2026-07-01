@@ -121,7 +121,7 @@ function ChartEmpty() {
                 <p className="text-xs text-[#64748B]">Jumlah dokumen & total NET VALUE per hari</p>
             </div>
             <div className="flex-1 flex items-center justify-center">
-                <p className="text-sm text-[#9CA3AF]">Belum ada data faktur.</p>
+                <p className="text-sm text-[#9CA3AF]">Belum ada data Gantungan Faktur.</p>
             </div>
         </div>
     );

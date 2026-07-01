@@ -16,12 +16,14 @@ import type { FakturRecord, FakturKPIs } from "./types";
 
 // ─── KPI Calculation ──────────────────────────────────────────────────────────
 
-export function calculateKPIs(data: FakturRecord[]): FakturKPIs | null {
-    if (data.length === 0) return null;
+export function calculateKPIs(data: FakturRecord[]): FakturKPIs {
+    if (data.length === 0) {
+        return { totalNetValue: 0, totalDokumen: 0, averageNetValue: 0, customerTerbanyak: null };
+    }
 
     const totalNetValue = data.reduce((s, r) => s + r.netValue, 0);
     const totalDokumen = data.length;
-    const averageNetValue = totalNetValue / totalDokumen;
+    const averageNetValue = totalDokumen > 0 ? totalNetValue / totalDokumen : 0;
 
     // Customer with most documents
     const custMap = new Map<string, number>();
@@ -29,7 +31,7 @@ export function calculateKPIs(data: FakturRecord[]): FakturKPIs | null {
         custMap.set(r.customer, (custMap.get(r.customer) ?? 0) + 1);
     }
     let customerTerbanyak: FakturKPIs["customerTerbanyak"] = null;
-    let maxCount = -Infinity;
+    let maxCount = 0;
     for (const [name, count] of custMap) {
         if (count > maxCount) { maxCount = count; customerTerbanyak = { name, count }; }
     }
@@ -89,30 +91,6 @@ const KpiCard = memo(function KpiCard({
     );
 });
 
-const EmptyKpiCard = memo(function EmptyKpiCard({
-    title, icon: Icon, iconBg, iconColor, accentBorder, delay,
-}: Omit<KpiCardProps, "primary" | "secondary">) {
-    return (
-        <motion.div
-            initial={{ opacity: 0, y: 18 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.38, delay }}
-            className={`bg-white border border-[#E5E7EB] rounded-[18px] p-5 border-l-4 ${accentBorder} shadow-sm`}
-        >
-            <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0 flex-1">
-                    <p className="text-xs font-medium text-[#64748B] mb-2">{title}</p>
-                    <p className="text-2xl font-bold text-[#9CA3AF] leading-none">—</p>
-                    <p className="text-xs text-[#9CA3AF] mt-1.5">Belum ada data</p>
-                </div>
-                <div className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 ${iconBg}`} aria-hidden="true">
-                    <Icon size={20} className={iconColor} />
-                </div>
-            </div>
-        </motion.div>
-    );
-});
-
 function CardSkeleton() {
     return (
         <div className="bg-white border border-[#E5E7EB] rounded-[18px] p-5 shadow-sm animate-pulse">
@@ -150,42 +128,46 @@ export const FakturCards = memo(function FakturCards({ data, loading = false }: 
         custTop: { icon: Users, iconBg: "bg-violet-50", iconColor: "text-violet-600", accentBorder: "border-l-violet-500" },
     } as const;
 
-    if (!kpis) {
-        return (
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-5" aria-label="KPI Cards — no data">
-                <EmptyKpiCard title="Total Nominal Faktur"   {...C.total} delay={0} />
-                <EmptyKpiCard title="Total Dokumen"          {...C.docs} delay={0.07} />
-                <EmptyKpiCard title="Average Nominal Faktur" {...C.avg} delay={0.14} />
-                <EmptyKpiCard title="Customer Terbanyak"     {...C.custTop} delay={0.21} />
-            </div>
-        );
-    }
+    // Empty state: show 0 / "-" values — always render cards
+    const isEmpty = data.length === 0;
 
     return (
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-5" aria-label="KPI Cards">
             <KpiCard
                 title="Total Nominal Faktur"
-                primary={formatRpCompact(kpis.totalNetValue)}
-                secondary={formatRpFull(kpis.totalNetValue)}
+                primary={isEmpty ? "Rp 0" : formatRpCompact(kpis.totalNetValue)}
+                secondary={isEmpty ? undefined : formatRpFull(kpis.totalNetValue)}
                 {...C.total} delay={0}
             />
             <KpiCard
                 title="Total Dokumen"
                 primary={kpis.totalDokumen.toLocaleString("id-ID")}
-                secondary="Sales Doc dalam filter"
+                secondary={isEmpty ? "Belum ada data" : "Sales Doc dalam filter"}
                 {...C.docs} delay={0.07}
             />
             <KpiCard
-                title="Average Nominal Faktur"
-                primary={formatRpCompact(kpis.averageNetValue)}
-                secondary={formatRpFull(Math.round(kpis.averageNetValue))}
-                {...C.avg} delay={0.14}
+                title="Customer Terbanyak"
+                primary={kpis.customerTerbanyak?.name ?? "-"}
+                secondary={kpis.customerTerbanyak ? `${kpis.customerTerbanyak.count} dokumen` : undefined}
+                {...C.custTop} delay={0.14}
             />
             <KpiCard
-                title="Customer Terbanyak"
-                primary={kpis.customerTerbanyak?.name ?? "—"}
-                secondary={kpis.customerTerbanyak ? `${kpis.customerTerbanyak.count} dokumen` : undefined}
-                {...C.custTop} delay={0.21}
+                title="Pay Terms Terbanyak"
+                primary={isEmpty ? "-" : (() => {
+                    const map = new Map<string, number>();
+                    for (const r of data) map.set(r.payTerms, (map.get(r.payTerms) ?? 0) + 1);
+                    let best = "-"; let bestCount = 0;
+                    for (const [pt, cnt] of map) { if (cnt > bestCount) { bestCount = cnt; best = pt; } }
+                    return best;
+                })()}
+                secondary={isEmpty ? undefined : (() => {
+                    const map = new Map<string, number>();
+                    for (const r of data) map.set(r.payTerms, (map.get(r.payTerms) ?? 0) + 1);
+                    let bestCount = 0;
+                    for (const cnt of map.values()) { if (cnt > bestCount) bestCount = cnt; }
+                    return bestCount > 0 ? `${bestCount} dokumen` : undefined;
+                })()}
+                {...C.avg} delay={0.21}
             />
         </div>
     );

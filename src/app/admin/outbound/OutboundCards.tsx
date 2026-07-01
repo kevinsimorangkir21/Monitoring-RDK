@@ -3,58 +3,101 @@
 /**
  * OutboundCards — 4 KPI summary cards for the Outbound dashboard.
  *
- *   1. Total Delivery    — count of records in filtered data
- *   2. Total Box         — SUM of totalBox across all filtered records
- *   3. Total Qty         — SUM of totalQty across all filtered records
- *   4. Status FO Dominan — statusFO with the highest record count, shown as "NAME (count)"
+ *   1. Total Mobil Muat — total record count in filtered data
+ *   2. Muat Inap        — records loaded overnight (hari contains "Inap" OR jamTerima < "06:00")
+ *   3. Muat Pagi        — records loaded in the morning (jamTerima between "06:00" and "10:00")
+ *   4. Rit 2            — records where putaran === "2"
  *
- * Requirements: 3.1–3.9
+ * Requirements: 3.1, 3.2, 3.3, 3.4, 3.5, 3.6, 3.7, 3.8, 3.9
  */
 
 import { memo, useMemo } from "react";
 import { motion } from "framer-motion";
-import { Truck, Package, Archive, Activity } from "lucide-react";
+import { Truck, Moon, Sun, RotateCw } from "lucide-react";
 import type { OutboundRecord } from "./types";
+
+// ─── Classification Predicates (pure, exported for testability) ───────────────
+
+/**
+ * Muat Inap: overnight loading.
+ * A record is Muat Inap if:
+ *   - the `hari` field contains the word "Inap" (case-insensitive), OR
+ *   - the `jamTerima` hour is before 06:00 (i.e. "HH:MM" where HH < 6)
+ */
+export function isMuatInap(record: OutboundRecord): boolean {
+    if (record.hari.toLowerCase().includes("inap")) return true;
+    const parts = record.jamTerima.split(":");
+    if (parts.length !== 2) return false;
+    const hour = parseInt(parts[0], 10);
+    if (isNaN(hour)) return false;
+    return hour < 6;
+}
+
+/**
+ * Muat Pagi: morning loading.
+ * A record is Muat Pagi if `jamTerima` is between "06:00" (inclusive) and "10:00" (exclusive),
+ * AND it is NOT already classified as Muat Inap (to preserve mutual exclusion and the invariant
+ * muatInap + muatPagi + rit2 ≤ total).
+ */
+export function isMuatPagi(record: OutboundRecord): boolean {
+    if (isMuatInap(record)) return false;
+    const parts = record.jamTerima.split(":");
+    if (parts.length !== 2) return false;
+    const hour = parseInt(parts[0], 10);
+    const minute = parseInt(parts[1], 10);
+    if (isNaN(hour) || isNaN(minute)) return false;
+    const totalMinutes = hour * 60 + minute;
+    // 06:00 = 360 minutes, 10:00 = 600 minutes
+    return totalMinutes >= 360 && totalMinutes < 600;
+}
+
+/**
+ * Rit 2: second-round (or third-round) delivery that is NOT already
+ * classified as Muat Inap or Muat Pagi.
+ * This ensures the three KPI categories are mutually exclusive so that
+ * muatInap + muatPagi + rit2 ≤ total always holds.
+ */
+export function isRit2(record: OutboundRecord): boolean {
+    if (isMuatInap(record) || isMuatPagi(record)) return false;
+    return record.putaran === "2" || record.putaran === "3";
+}
 
 // ─── KPI Calculation ──────────────────────────────────────────────────────────
 
-interface OutboundKPIs {
-    totalDelivery: number;
-    totalBox: number;
-    totalQty: number;
-    dominantStatusFO: { name: string; count: number } | null;
+export interface OutboundKPIs {
+    total: number;
+    muatInap: number;
+    muatPagi: number;
+    rit2: number;
 }
 
-function calculateKPIs(data: OutboundRecord[]): OutboundKPIs {
-    const totalDelivery = data.length;
-    const totalBox = data.reduce((s, r) => s + r.totalBox, 0);
-    const totalQty = data.reduce((s, r) => s + r.totalQty, 0);
-
-    // Build frequency map for statusFO
-    let dominantStatusFO: OutboundKPIs["dominantStatusFO"] = null;
-    if (data.length > 0) {
-        const freqMap = new Map<string, number>();
-        for (const r of data) {
-            freqMap.set(r.statusFO, (freqMap.get(r.statusFO) ?? 0) + 1);
-        }
-        let maxCount = -Infinity;
-        for (const [name, count] of freqMap) {
-            if (count > maxCount) {
-                maxCount = count;
-                dominantStatusFO = { name, count };
-            }
-        }
-    }
-
-    return { totalDelivery, totalBox, totalQty, dominantStatusFO };
+/**
+ * Compute all four KPI values from a (filtered) data array.
+ * Each category is an independent filter applied to the same array,
+ * so muatInap + muatPagi + rit2 ≤ total always holds.
+ */
+export function calculateKPIs(data: OutboundRecord[]): OutboundKPIs {
+    const total = data.length;
+    const muatInap = data.filter(isMuatInap).length;
+    const muatPagi = data.filter(isMuatPagi).length;
+    const rit2 = data.filter(isRit2).length;
+    return { total, muatInap, muatPagi, rit2 };
 }
 
-// ─── Sub-components ───────────────────────────────────────────────────────────
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+/** Format a count/percentage pair for display. Returns "0" and "0%" when total is 0. */
+function formatPct(count: number, total: number): string {
+    if (total === 0) return "0%";
+    return `${((count / total) * 100).toFixed(1)}%`;
+}
+
+// ─── Sub-component ────────────────────────────────────────────────────────────
 
 interface KpiCardProps {
     title: string;
-    primary: string;
-    secondary?: string;
+    count: number;
+    pct?: string;
     icon: React.ElementType;
     iconBg: string;
     iconColor: string;
@@ -64,8 +107,8 @@ interface KpiCardProps {
 
 const KpiCard = memo(function KpiCard({
     title,
-    primary,
-    secondary,
+    count,
+    pct,
     icon: Icon,
     iconBg,
     iconColor,
@@ -79,16 +122,16 @@ const KpiCard = memo(function KpiCard({
             transition={{ duration: 0.38, delay }}
             whileHover={{ y: -2, boxShadow: "0 6px 20px rgba(0,0,0,0.07)" }}
             className={`bg-white border border-[#E5E7EB] rounded-[18px] p-4 sm:p-5 border-l-4 ${accentBorder} shadow-sm`}
-            aria-label={`${title}: ${primary}`}
+            aria-label={`${title}: ${count}`}
         >
             <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0 flex-1">
                     <p className="text-xs font-medium text-[#64748B] mb-2">{title}</p>
-                    <p className="text-xl sm:text-2xl font-bold text-[#111827] leading-none truncate">
-                        {primary}
+                    <p className="text-xl sm:text-2xl font-bold text-[#111827] leading-none">
+                        {count.toLocaleString("id-ID")}
                     </p>
-                    {secondary && (
-                        <p className="text-xs text-[#64748B] mt-1.5 truncate">{secondary}</p>
+                    {pct !== undefined && (
+                        <p className="text-xs text-[#64748B] mt-1.5">{pct} dari total</p>
                     )}
                 </div>
                 <div
@@ -102,35 +145,6 @@ const KpiCard = memo(function KpiCard({
     );
 });
 
-// ─── Card config constants ────────────────────────────────────────────────────
-
-const CARD_CONFIG = {
-    delivery: {
-        icon: Truck,
-        iconBg: "bg-emerald-50",
-        iconColor: "text-emerald-600",
-        accentBorder: "border-l-emerald-500",
-    },
-    box: {
-        icon: Package,
-        iconBg: "bg-blue-50",
-        iconColor: "text-blue-600",
-        accentBorder: "border-l-blue-500",
-    },
-    qty: {
-        icon: Archive,
-        iconBg: "bg-orange-50",
-        iconColor: "text-orange-600",
-        accentBorder: "border-l-orange-500",
-    },
-    statusFO: {
-        icon: Activity,
-        iconBg: "bg-violet-50",
-        iconColor: "text-violet-600",
-        accentBorder: "border-l-violet-500",
-    },
-} as const;
-
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 interface OutboundCardsProps {
@@ -140,46 +154,59 @@ interface OutboundCardsProps {
 export const OutboundCards = memo(function OutboundCards({ data }: OutboundCardsProps) {
     const kpis = useMemo(() => calculateKPIs(data), [data]);
 
-    const dominantPrimary =
-        kpis.dominantStatusFO !== null
-            ? `${kpis.dominantStatusFO.name} (${kpis.dominantStatusFO.count})`
-            : "—";
+    const muatInapPct = useMemo(() => formatPct(kpis.muatInap, kpis.total), [kpis]);
+    const muatPagiPct = useMemo(() => formatPct(kpis.muatPagi, kpis.total), [kpis]);
+    const rit2Pct = useMemo(() => formatPct(kpis.rit2, kpis.total), [kpis]);
 
     return (
         <div
             className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-5"
             aria-label="Outbound KPI Cards"
         >
+            {/* Card 1 — Total Mobil Muat */}
             <KpiCard
-                title="Total Delivery"
-                primary={kpis.totalDelivery.toLocaleString("id-ID")}
-                secondary="Jumlah pengiriman"
-                {...CARD_CONFIG.delivery}
+                title="Total Mobil Muat"
+                count={kpis.total}
+                icon={Truck}
+                iconBg="bg-emerald-50"
+                iconColor="text-[#10B981]"
+                accentBorder="border-l-[#10B981]"
                 delay={0}
             />
+
+            {/* Card 2 — Muat Inap */}
             <KpiCard
-                title="Total Box"
-                primary={kpis.totalBox.toLocaleString("id-ID")}
-                secondary="Kardus terkirim"
-                {...CARD_CONFIG.box}
+                title="Muat Inap"
+                count={kpis.muatInap}
+                pct={muatInapPct}
+                icon={Moon}
+                iconBg="bg-indigo-50"
+                iconColor="text-indigo-500"
+                accentBorder="border-l-indigo-400"
                 delay={0.07}
             />
+
+            {/* Card 3 — Muat Pagi */}
             <KpiCard
-                title="Total Qty"
-                primary={kpis.totalQty.toLocaleString("id-ID")}
-                secondary="Item terkirim"
-                {...CARD_CONFIG.qty}
+                title="Muat Pagi"
+                count={kpis.muatPagi}
+                pct={muatPagiPct}
+                icon={Sun}
+                iconBg="bg-amber-50"
+                iconColor="text-amber-500"
+                accentBorder="border-l-amber-400"
                 delay={0.14}
             />
+
+            {/* Card 4 — Rit 2 */}
             <KpiCard
-                title="Status FO Dominan"
-                primary={dominantPrimary}
-                secondary={
-                    kpis.dominantStatusFO !== null
-                        ? "Status paling sering"
-                        : "Belum ada data"
-                }
-                {...CARD_CONFIG.statusFO}
+                title="Rit 2"
+                count={kpis.rit2}
+                pct={rit2Pct}
+                icon={RotateCw}
+                iconBg="bg-sky-50"
+                iconColor="text-sky-500"
+                accentBorder="border-l-sky-400"
                 delay={0.21}
             />
         </div>

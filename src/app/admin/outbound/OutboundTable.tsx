@@ -1,12 +1,23 @@
 "use client";
 
+/**
+ * OutboundTable — Paginated detail table for Outbound records.
+ *
+ * 14 columns:
+ *   Tanggal | FREIGHT ORDER | Mobil Muat | S-TYPE | Assign Job | JAM TERIMA |
+ *   STATUS | Selesai Muat | HARI | PUTARAN | ST | H2 | JAM RUNNING | Action
+ *
+ * S-TYPE column is kept for table display (matches Excel data structure),
+ * but is no longer used in visualizations/charts.
+ *
+ * STATUS values: "Muat Pagi" | "Muat Inap"
+ */
+
 import React, { memo, useCallback, useEffect, useState } from "react";
 import { Pencil, Trash2, Inbox, ChevronLeft, ChevronRight } from "lucide-react";
 import type { OutboundRecord } from "./types";
 
-// ──────────────────────────────────────────────
-// Types
-// ──────────────────────────────────────────────
+// ─── Types ────────────────────────────────────────────────────────────────────
 
 interface OutboundTableProps {
     data: OutboundRecord[];
@@ -17,49 +28,42 @@ interface OutboundTableProps {
 
 const PAGE_SIZE_OPTIONS = [10, 25, 50] as const;
 
-// ──────────────────────────────────────────────
-// Status FO Badge
-// ──────────────────────────────────────────────
+// ─── STATUS badge colors — Muat Pagi | Muat Inap ─────────────────────────────
 
-const STATUS_FO_STYLES: Record<string, string> = {
-    OPEN: "bg-emerald-100 text-emerald-700 border border-emerald-200",
-    CLOSE: "bg-blue-100 text-blue-700 border border-blue-200",
-    CANCEL: "bg-red-100 text-red-700 border border-red-200",
-    PARTIAL: "bg-amber-100 text-amber-700 border border-amber-200",
+const STATUS_STYLES: Record<string, string> = {
+    "Muat Pagi": "bg-amber-100 text-amber-700 border border-amber-200",
+    "Muat Inap": "bg-indigo-100 text-indigo-700 border border-indigo-200",
 };
 
-function StatusFOBadge({ status }: { status: string }) {
-    const style = STATUS_FO_STYLES[status] ?? "bg-gray-100 text-gray-700 border border-gray-200";
+function StatusBadge({ status }: { status: string }) {
+    const style = STATUS_STYLES[status] ?? "bg-gray-100 text-gray-700 border border-gray-200";
     return (
-        <span
-            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${style}`}
-        >
+        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${style}`}>
             {status}
         </span>
     );
 }
 
-// ──────────────────────────────────────────────
-// Column header list
-// ──────────────────────────────────────────────
+// ─── Column headers ───────────────────────────────────────────────────────────
 
 const COLUMNS = [
     "Tanggal",
-    "Plant",
-    "Vendor",
-    "No Polisi",
-    "Driver",
-    "Status FO",
-    "Total Box",
-    "Total Qty",
-    "Jam Loading",
-    "Jam Berangkat",
-    "Aksi",
+    "FREIGHT ORDER",
+    "Mobil Muat",
+    "S-TYPE",
+    "Assign Job",
+    "JAM TERIMA",
+    "STATUS",
+    "Selesai Muat",
+    "HARI",
+    "PUTARAN",
+    "ST",
+    "H2",
+    "JAM RUNNING",
+    "Action",
 ] as const;
 
-// ──────────────────────────────────────────────
-// OutboundTable Component
-// ──────────────────────────────────────────────
+// ─── OutboundTable Component ──────────────────────────────────────────────────
 
 const OutboundTable = memo(function OutboundTable({
     data,
@@ -70,10 +74,7 @@ const OutboundTable = memo(function OutboundTable({
     const [page, setPage] = useState(1);
     const [pageSize, setPageSize] = useState<number>(10);
 
-    // Reset to page 1 whenever the data prop changes
-    useEffect(() => {
-        setPage(1);
-    }, [data]);
+    useEffect(() => { setPage(1); }, [data]);
 
     const total = data.length;
     const totalPages = Math.max(1, Math.ceil(total / pageSize));
@@ -81,42 +82,19 @@ const OutboundTable = memo(function OutboundTable({
     const endIndex = Math.min(startIndex + pageSize, total);
     const pageData = data.slice(startIndex, endIndex);
 
-    const handleEdit = useCallback(
-        (record: OutboundRecord) => {
-            onEdit(record);
-        },
-        [onEdit]
-    );
-
-    const handleDelete = useCallback(
-        (record: OutboundRecord) => {
-            onDelete(record);
-        },
-        [onDelete]
-    );
-
-    const handlePageSizeChange = useCallback(
-        (e: React.ChangeEvent<HTMLSelectElement>) => {
-            setPageSize(Number(e.target.value));
-            setPage(1);
-        },
-        []
-    );
-
-    const handlePrevPage = useCallback(() => {
-        setPage((p) => Math.max(1, p - 1));
+    const handleEdit = useCallback((record: OutboundRecord) => { onEdit(record); }, [onEdit]);
+    const handleDelete = useCallback((record: OutboundRecord) => { onDelete(record); }, [onDelete]);
+    const handlePageSizeChange = useCallback((e: React.ChangeEvent<HTMLSelectElement>) => {
+        setPageSize(Number(e.target.value));
+        setPage(1);
     }, []);
-
-    const handleNextPage = useCallback(() => {
-        setPage((p) => Math.min(totalPages, p + 1));
-    }, [totalPages]);
+    const handlePrevPage = useCallback(() => setPage((p) => Math.max(1, p - 1)), []);
+    const handleNextPage = useCallback(() => setPage((p) => Math.min(totalPages, p + 1)), [totalPages]);
 
     return (
         <div className="bg-white border border-[#E5E7EB] rounded-[18px] shadow-sm overflow-hidden">
-            {/* Scrollable table container */}
             <div className="overflow-x-auto">
-                <table className="min-w-[1100px] w-full border-collapse">
-                    {/* Table header */}
+                <table className="min-w-[900px] w-full border-collapse">
                     <thead>
                         <tr className="bg-[#F9FAFB] border-b border-[#E5E7EB]">
                             {COLUMNS.map((col) => (
@@ -130,10 +108,8 @@ const OutboundTable = memo(function OutboundTable({
                         </tr>
                     </thead>
 
-                    {/* Table body */}
                     <tbody>
                         {loading ? (
-                            // Loading skeleton rows
                             Array.from({ length: pageSize }).map((_, i) => (
                                 <tr key={i} className="border-b border-[#E5E7EB]">
                                     {COLUMNS.map((col) => (
@@ -144,14 +120,11 @@ const OutboundTable = memo(function OutboundTable({
                                 </tr>
                             ))
                         ) : total === 0 ? (
-                            // Empty state
                             <tr>
                                 <td colSpan={COLUMNS.length} className="px-4 py-16 text-center">
                                     <div className="flex flex-col items-center gap-3 text-[#94A3B8]">
-                                        <Inbox size={40} strokeWidth={1.5} />
-                                        <span className="text-sm font-medium">
-                                            Tidak ada data outbound ditemukan
-                                        </span>
+                                        <Inbox size={40} strokeWidth={1.5} aria-hidden="true" />
+                                        <span className="text-sm font-medium">Belum ada data.</span>
                                     </div>
                                 </td>
                             </tr>
@@ -161,55 +134,40 @@ const OutboundTable = memo(function OutboundTable({
                                     key={record.id}
                                     className="border-b border-[#E5E7EB] hover:bg-[#F9FAFB] transition-colors"
                                 >
-                                    <td className="px-4 py-3 text-sm text-[#374151] whitespace-nowrap">
-                                        {record.tanggal}
-                                    </td>
-                                    <td className="px-4 py-3 text-sm text-[#374151] whitespace-nowrap">
-                                        {record.plant}
-                                    </td>
-                                    <td className="px-4 py-3 text-sm text-[#374151]">
-                                        {record.vendor}
-                                    </td>
-                                    <td className="px-4 py-3 text-sm text-[#374151] whitespace-nowrap">
-                                        {record.noPolisi}
-                                    </td>
-                                    <td className="px-4 py-3 text-sm text-[#374151]">
-                                        {record.driver}
-                                    </td>
+                                    <td className="px-4 py-3 text-sm text-[#374151] whitespace-nowrap">{record.tanggal}</td>
+                                    <td className="px-4 py-3 text-sm font-medium text-[#111827] whitespace-nowrap">{record.freightOrder}</td>
+                                    <td className="px-4 py-3 text-sm text-[#374151] whitespace-nowrap">{record.mobilMuat}</td>
+                                    <td className="px-4 py-3 text-sm text-[#374151] whitespace-nowrap">{record.sType}</td>
+                                    <td className="px-4 py-3 text-sm text-[#374151] whitespace-nowrap">{record.assignJob}</td>
+                                    <td className="px-4 py-3 text-sm text-[#374151] whitespace-nowrap">{record.jamTerima}</td>
                                     <td className="px-4 py-3 whitespace-nowrap">
-                                        <StatusFOBadge status={record.statusFO} />
+                                        <StatusBadge status={record.status} />
                                     </td>
-                                    <td className="px-4 py-3 text-sm text-[#374151] text-right whitespace-nowrap">
-                                        {record.totalBox.toLocaleString("id-ID")}
-                                    </td>
-                                    <td className="px-4 py-3 text-sm text-[#374151] text-right whitespace-nowrap">
-                                        {record.totalQty.toLocaleString("id-ID")}
-                                    </td>
-                                    <td className="px-4 py-3 text-sm text-[#374151] whitespace-nowrap">
-                                        {record.jamLoading}
-                                    </td>
-                                    <td className="px-4 py-3 text-sm text-[#374151] whitespace-nowrap">
-                                        {record.jamBerangkat}
-                                    </td>
+                                    <td className="px-4 py-3 text-sm text-[#374151] whitespace-nowrap">{record.selesaiMuat}</td>
+                                    <td className="px-4 py-3 text-sm text-[#374151] whitespace-nowrap">{record.hari}</td>
+                                    <td className="px-4 py-3 text-sm text-[#374151] whitespace-nowrap">{record.putaran}</td>
+                                    <td className="px-4 py-3 text-sm text-[#374151] text-right whitespace-nowrap">{record.st}</td>
+                                    <td className="px-4 py-3 text-sm text-[#374151] text-right whitespace-nowrap">{record.h2}</td>
+                                    <td className="px-4 py-3 text-sm text-[#374151] whitespace-nowrap">{record.jamRunning}</td>
                                     <td className="px-4 py-3 whitespace-nowrap">
                                         <div className="flex items-center gap-1.5">
-                                            {/* Edit button */}
                                             <button
                                                 type="button"
                                                 onClick={() => handleEdit(record)}
                                                 title="Edit"
-                                                className="p-1.5 rounded-lg text-[#64748B] hover:text-emerald-600 hover:bg-emerald-50 transition-colors"
+                                                aria-label={`Edit ${record.freightOrder}`}
+                                                className="p-1.5 rounded-lg text-[#64748B] hover:text-emerald-600 hover:bg-emerald-50 transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-200"
                                             >
-                                                <Pencil size={15} strokeWidth={2} />
+                                                <Pencil size={15} strokeWidth={2} aria-hidden="true" />
                                             </button>
-                                            {/* Delete button */}
                                             <button
                                                 type="button"
                                                 onClick={() => handleDelete(record)}
                                                 title="Hapus"
-                                                className="p-1.5 rounded-lg text-[#64748B] hover:text-red-600 hover:bg-red-50 transition-colors"
+                                                aria-label={`Hapus ${record.freightOrder}`}
+                                                className="p-1.5 rounded-lg text-[#64748B] hover:text-red-600 hover:bg-red-50 transition-colors focus:outline-none focus:ring-2 focus:ring-red-200"
                                             >
-                                                <Trash2 size={15} strokeWidth={2} />
+                                                <Trash2 size={15} strokeWidth={2} aria-hidden="true" />
                                             </button>
                                         </div>
                                     </td>
@@ -223,48 +181,41 @@ const OutboundTable = memo(function OutboundTable({
             {/* Pagination footer */}
             {!loading && total > 0 && (
                 <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-4 py-3 border-t border-[#E5E7EB] bg-[#F9FAFB]">
-                    {/* Page size selector + record range label */}
                     <div className="flex items-center gap-3 text-sm text-[#64748B]">
                         <span>Tampilkan</span>
                         <select
                             value={pageSize}
                             onChange={handlePageSizeChange}
                             className="border border-[#E5E7EB] rounded-lg px-2 py-1 text-sm text-[#374151] bg-white focus:outline-none focus:ring-2 focus:ring-[#10B981]/40"
+                            aria-label="Ukuran halaman"
                         >
                             {PAGE_SIZE_OPTIONS.map((size) => (
-                                <option key={size} value={size}>
-                                    {size}
-                                </option>
+                                <option key={size} value={size}>{size}</option>
                             ))}
                         </select>
-                        <span>
-                            {startIndex + 1}–{endIndex} dari {total} data
-                        </span>
+                        <span>{startIndex + 1}–{endIndex} dari {total} data</span>
                     </div>
-
-                    {/* Prev / Next buttons */}
                     <div className="flex items-center gap-1">
                         <button
                             type="button"
                             onClick={handlePrevPage}
                             disabled={page === 1}
+                            aria-label="Halaman sebelumnya"
                             className="p-1.5 rounded-lg text-[#64748B] hover:text-[#374151] hover:bg-white border border-transparent hover:border-[#E5E7EB] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                         >
-                            <ChevronLeft size={16} />
+                            <ChevronLeft size={16} aria-hidden="true" />
                         </button>
-
-                        {/* Page indicator */}
                         <span className="px-3 py-1 text-sm text-[#374151] font-medium">
                             {page} / {totalPages}
                         </span>
-
                         <button
                             type="button"
                             onClick={handleNextPage}
                             disabled={page === totalPages}
+                            aria-label="Halaman berikutnya"
                             className="p-1.5 rounded-lg text-[#64748B] hover:text-[#374151] hover:bg-white border border-transparent hover:border-[#E5E7EB] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                         >
-                            <ChevronRight size={16} />
+                            <ChevronRight size={16} aria-hidden="true" />
                         </button>
                     </div>
                 </div>

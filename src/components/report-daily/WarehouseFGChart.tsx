@@ -5,8 +5,7 @@
  * ComposedChart:
  *   Stacked Bar → Qty Picking Box (#3B82F6) + Qty Picking PCS (#8B5CF6)
  *   Line        → Jam Pulang (#EC4899) on right YAxis
- * Full-width, height ≈ 400px.
- * Lazy-loaded via dynamic() in the page.
+ * Menerima data sebagai props; menampilkan empty state bila kosong.
  */
 
 import {
@@ -14,7 +13,6 @@ import {
     XAxis, YAxis, CartesianGrid,
     Tooltip, Legend, ResponsiveContainer,
 } from "recharts";
-import { jamPulangPickingData } from "@/mock/reportDaily";
 import type { JamPulangPickingItem } from "@/types/reportDaily";
 
 // ─── Helper: fractional hour → "HH:mm" ───────────────────────────────────────
@@ -107,22 +105,15 @@ function CustomLegend({ payload }: { payload?: LegendPayloadItem[] }) {
 const TICK_STYLE = { fill: "#64748B", fontSize: 11 };
 const GRID_COLOR = "#F1F5F9";
 
+// ─── Props ────────────────────────────────────────────────────────────────────
+
+interface WarehouseFGChartProps {
+    data: JamPulangPickingItem[];
+}
+
 // ─── Component ────────────────────────────────────────────────────────────────
 
-export default function WarehouseFGChart() {
-    const data: JamPulangPickingItem[] = jamPulangPickingData;
-
-    if (!data.length) {
-        return (
-            <div
-                className="bg-white border border-[#E5E7EB] rounded-[18px] p-5 shadow-sm flex items-center justify-center"
-                style={{ height: 400 }}
-            >
-                <p className="text-sm text-[#9CA3AF]">Belum ada data Jam Pulang vs Qty Picking.</p>
-            </div>
-        );
-    }
-
+export default function WarehouseFGChart({ data }: WarehouseFGChartProps) {
     return (
         <div
             className="bg-white border border-[#E5E7EB] rounded-[18px] p-5 shadow-sm flex flex-col w-full"
@@ -136,108 +127,96 @@ export default function WarehouseFGChart() {
                 </p>
             </div>
 
-            {/* Chart */}
-            <div className="flex-1 min-h-0">
-                <ResponsiveContainer width="100%" height="100%">
-                    <ComposedChart
-                        data={data}
-                        margin={{ top: 4, right: 40, left: 4, bottom: 24 }}
-                        barCategoryGap="25%"
-                    >
-                        {/* Horizontal + thin vertical grid */}
-                        <CartesianGrid
-                            strokeDasharray="3 3"
-                            stroke={GRID_COLOR}
-                            vertical={true}
-                            horizontal={true}
-                        />
-
-                        {/* X Axis — tanggal, rotated -35° */}
-                        <XAxis
-                            dataKey="tanggal"
-                            tick={{ ...TICK_STYLE, textAnchor: "end" }}
-                            angle={-35}
-                            axisLine={false}
-                            tickLine={false}
-                            interval={0}
-                        />
-
-                        {/* Left Y Axis — Qty Picking Box + Qty Picking PCS */}
-                        <YAxis
-                            yAxisId="left"
-                            orientation="left"
-                            tick={TICK_STYLE}
-                            axisLine={false}
-                            tickLine={false}
-                            tickFormatter={(v: number) => v.toLocaleString("id-ID")}
-                            width={52}
-                        />
-
-                        {/* Right Y Axis — Jam Pulang [0, 24] */}
-                        <YAxis
-                            yAxisId="right"
-                            orientation="right"
-                            tick={TICK_STYLE}
-                            axisLine={false}
-                            tickLine={false}
-                            domain={[0, 24]}
-                            ticks={[0, 5, 10, 15, 20, 24]}
-                            tickFormatter={(v: number) => String(v)}
-                            width={28}
-                        />
-
-                        {/* Custom tooltip */}
-                        <Tooltip
-                            content={<ChartTooltip />}
-                            cursor={{ fill: "rgba(0,0,0,0.03)" }}
-                        />
-
-                        {/* Custom legend below */}
-                        <Legend content={<CustomLegend />} />
-
-                        {/* Bar 1 — Qty Picking Box (#3B82F6) — bottom of stack */}
-                        <Bar
-                            yAxisId="left"
-                            dataKey="qtyPickingBox"
-                            name="Qty Picking Box"
-                            fill="#3B82F6"
-                            stackId="qty"
-                            radius={[0, 0, 0, 0]}
-                            maxBarSize={40}
-                            legendType="square"
-                            isAnimationActive
-                            animationDuration={700}
-                        />
-
-                        {/* Bar 2 — Qty Picking PCS (#8B5CF6) — top of stack */}
-                        <Bar
-                            yAxisId="left"
-                            dataKey="qtyPickingPcs"
-                            name="Qty Picking Pcs"
-                            fill="#8B5CF6"
-                            stackId="qty"
-                            radius={[5, 5, 0, 0]}
-                            maxBarSize={40}
-                            legendType="square"
-                            isAnimationActive
-                            animationDuration={700}
-                        />
-
-                        {/* Line — Jam Pulang (#EC4899) on right Y-axis */}
-                        <Line
-                            yAxisId="right"
-                            type="monotone"
-                            dataKey="jamPulang"
-                            name="Jam Pulang"
-                            stroke="#EC4899"
-                            strokeWidth={3}
-                            dot={{ fill: "#EC4899", r: 4, strokeWidth: 0 }}
-                            activeDot={{ r: 6 }}
-                            legendType="line"
-                        />
-                    </ComposedChart>
-                </ResponsiveContainer>
-            </div>
+            {data.length === 0 ? (
+                <div className="flex-1 flex items-center justify-center">
+                    <p className="text-sm text-[#9CA3AF]">Belum ada data Warehouse FG.</p>
+                </div>
+            ) : (
+                <div className="flex-1 min-h-0">
+                    <ResponsiveContainer width="100%" height="100%">
+                        <ComposedChart
+                            data={data}
+                            margin={{ top: 4, right: 40, left: 4, bottom: 24 }}
+                            barCategoryGap="25%"
+                        >
+                            <CartesianGrid
+                                strokeDasharray="3 3"
+                                stroke={GRID_COLOR}
+                                vertical={true}
+                                horizontal={true}
+                            />
+                            <XAxis
+                                dataKey="tanggal"
+                                tick={{ ...TICK_STYLE, textAnchor: "end" }}
+                                angle={-35}
+                                axisLine={false}
+                                tickLine={false}
+                                interval={0}
+                            />
+                            <YAxis
+                                yAxisId="left"
+                                orientation="left"
+                                tick={TICK_STYLE}
+                                axisLine={false}
+                                tickLine={false}
+                                tickFormatter={(v: number) => v.toLocaleString("id-ID")}
+                                width={52}
+                            />
+                            <YAxis
+                                yAxisId="right"
+                                orientation="right"
+                                tick={TICK_STYLE}
+                                axisLine={false}
+                                tickLine={false}
+                                domain={[0, 24]}
+                                ticks={[0, 5, 10, 15, 20, 24]}
+                                tickFormatter={(v: number) => String(v)}
+                                width={28}
+                            />
+                            <Tooltip
+                                content={<ChartTooltip />}
+                                cursor={{ fill: "rgba(0,0,0,0.03)" }}
+                            />
+                            <Legend content={<CustomLegend />} />
+                            <Bar
+                                yAxisId="left"
+                                dataKey="qtyPickingBox"
+                                name="Qty Picking Box"
+                                fill="#3B82F6"
+                                stackId="qty"
+                                radius={[0, 0, 0, 0]}
+                                maxBarSize={40}
+                                legendType="square"
+                                isAnimationActive
+                                animationDuration={700}
+                            />
+                            <Bar
+                                yAxisId="left"
+                                dataKey="qtyPickingPcs"
+                                name="Qty Picking Pcs"
+                                fill="#8B5CF6"
+                                stackId="qty"
+                                radius={[5, 5, 0, 0]}
+                                maxBarSize={40}
+                                legendType="square"
+                                isAnimationActive
+                                animationDuration={700}
+                            />
+                            <Line
+                                yAxisId="right"
+                                type="monotone"
+                                dataKey="jamPulang"
+                                name="Jam Pulang"
+                                stroke="#EC4899"
+                                strokeWidth={3}
+                                dot={{ fill: "#EC4899", r: 4, strokeWidth: 0 }}
+                                activeDot={{ r: 6 }}
+                                legendType="line"
+                            />
+                        </ComposedChart>
+                    </ResponsiveContainer>
+                </div>
+            )}
         </div>
     );
 }
