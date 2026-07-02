@@ -1,6 +1,8 @@
 package controllers
 
 import (
+	"context"
+	"log"
 	"strconv"
 
 	"github.com/VYN2/Auth_Service/internal/syncsvc"
@@ -11,17 +13,17 @@ import (
 )
 
 type ClaimVendorController struct {
-	svc     services.ClaimVendorService
-	syncSvc syncsvc.SyncService
+	svc              services.ClaimVendorService
+	appsScriptClient syncsvc.AppsScriptClient
 }
 
 func NewClaimVendorController(svc services.ClaimVendorService) *ClaimVendorController {
 	return &ClaimVendorController{svc: svc}
 }
 
-// SetSyncService attaches an optional SyncService for async sheet sync.
-func (ctrl *ClaimVendorController) SetSyncService(syncSvc syncsvc.SyncService) {
-	ctrl.syncSvc = syncSvc
+// SetAppsScriptClient injects AppsScriptClient for Google Sheets sync
+func (ctrl *ClaimVendorController) SetAppsScriptClient(client syncsvc.AppsScriptClient) {
+	ctrl.appsScriptClient = client
 }
 
 func (ctrl *ClaimVendorController) List(c *gin.Context) {
@@ -60,9 +62,24 @@ func (ctrl *ClaimVendorController) Create(c *gin.Context) {
 		utils.InternalError(c, err)
 		return
 	}
-	if ctrl.syncSvc != nil && ctrl.syncSvc.IsConfigured() {
-		go ctrl.syncSvc.SyncAfterCRUD("claim_vendors", syncsvc.OpCreate, &body)
+	
+	// Async sync to Google Sheets
+	if ctrl.appsScriptClient != nil {
+		go func() {
+			defer func() {
+				if r := recover(); r != nil {
+					log.Printf("[SYNC] panic recovered in CREATE Claim: %v", r)
+				}
+			}()
+			data := syncsvc.EntityToMap(&body)
+			if err := ctrl.appsScriptClient.CreateRow(context.Background(), "Claim", data); err != nil {
+				log.Printf("[SYNC] failed CREATE Claim: %v", err)
+			} else {
+				log.Printf("[SYNC] CREATE Claim success (ID=%d)", body.ID)
+			}
+		}()
 	}
+	
 	utils.Created(c, body)
 }
 
@@ -83,9 +100,8 @@ func (ctrl *ClaimVendorController) Update(c *gin.Context) {
 		utils.InternalError(c, err)
 		return
 	}
-	if ctrl.syncSvc != nil && ctrl.syncSvc.IsConfigured() {
-		go ctrl.syncSvc.SyncAfterCRUD("claim_vendors", syncsvc.OpUpdate, existing)
-	}
+	// Note: UPDATE tidak sync ke Spreadsheet sesuai requirement
+	// Spreadsheet adalah arsip operasional, hanya CREATE yang di-sync
 	utils.OK(c, existing)
 }
 
@@ -96,8 +112,7 @@ func (ctrl *ClaimVendorController) Delete(c *gin.Context) {
 		utils.InternalError(c, err)
 		return
 	}
-	if ctrl.syncSvc != nil && ctrl.syncSvc.IsConfigured() {
-		go ctrl.syncSvc.SyncAfterCRUD("claim_vendors", syncsvc.OpDelete, &models.ClaimVendor{})
-	}
+	// Note: DELETE tidak sync ke Spreadsheet sesuai requirement
+	// Spreadsheet adalah arsip operasional
 	utils.OK(c, gin.H{"message": "Data berhasil dihapus"})
 }

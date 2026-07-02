@@ -20,11 +20,12 @@ type Config struct {
 	CORSOrigins string
 
 	// Google Sheets Sync — field baru (additive, field lama tidak berubah)
-	GoogleProjectID     string // GOOGLE_PROJECT_ID (opsional, warning saja)
-	GoogleClientEmail   string // GOOGLE_CLIENT_EMAIL (wajib untuk mode aktif)
-	GooglePrivateKey    string // GOOGLE_PRIVATE_KEY (wajib untuk mode aktif, \n dinormalisasi)
-	GoogleSpreadsheetID string // GOOGLE_SPREADSHEET_ID (wajib untuk mode aktif)
-	GoogleWebhookSecret string // GOOGLE_WEBHOOK_SECRET (opsional, warning saja)
+	GoogleProjectID      string // GOOGLE_PROJECT_ID (opsional, warning saja)
+	GoogleClientEmail    string // GOOGLE_CLIENT_EMAIL (wajib untuk mode aktif)
+	GooglePrivateKey     string // GOOGLE_PRIVATE_KEY (wajib untuk mode aktif, \n dinormalisasi)
+	GoogleSpreadsheetID  string // GOOGLE_SPREADSHEET_ID (wajib untuk mode aktif)
+	GoogleWebhookSecret  string // GOOGLE_WEBHOOK_SECRET (opsional, warning saja)
+	GoogleAppsScriptURL  string // GOOGLE_APPS_SCRIPT_URL (URL doPost Apps Script untuk sync Dashboard→Spreadsheet)
 }
 
 // AppConfig is the global config instance, populated by Load().
@@ -54,6 +55,7 @@ func Load() {
 	cfg.GooglePrivateKey = strings.ReplaceAll(os.Getenv("GOOGLE_PRIVATE_KEY"), `\n`, "\n")
 	cfg.GoogleSpreadsheetID = os.Getenv("GOOGLE_SPREADSHEET_ID")
 	cfg.GoogleWebhookSecret = os.Getenv("GOOGLE_WEBHOOK_SECRET")
+	cfg.GoogleAppsScriptURL = os.Getenv("GOOGLE_APPS_SCRIPT_URL")
 
 	if cfg.GoogleProjectID == "" {
 		log.Println("[config] warning: GOOGLE_PROJECT_ID is not set — Google Sheets sync will run in Degraded Mode")
@@ -69,6 +71,9 @@ func Load() {
 	}
 	if cfg.GoogleWebhookSecret == "" {
 		log.Println("[config] warning: GOOGLE_WEBHOOK_SECRET is not set — webhook endpoint will return 503")
+	}
+	if cfg.GoogleAppsScriptURL == "" {
+		log.Println("[config] warning: GOOGLE_APPS_SCRIPT_URL is not set — Dashboard→Spreadsheet sync will be disabled")
 	}
 
 	AppConfig = cfg

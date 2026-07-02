@@ -1,6 +1,8 @@
 package controllers
 
 import (
+	"context"
+	"log"
 	"strconv"
 
 	"github.com/VYN2/Auth_Service/internal/syncsvc"
@@ -11,17 +13,17 @@ import (
 )
 
 type ScanOutDCController struct {
-	svc     services.ScanOutDCService
-	syncSvc syncsvc.SyncService
+	svc              services.ScanOutDCService
+	appsScriptClient syncsvc.AppsScriptClient
 }
 
 func NewScanOutDCController(svc services.ScanOutDCService) *ScanOutDCController {
 	return &ScanOutDCController{svc: svc}
 }
 
-// SetSyncService attaches an optional SyncService for async sheet sync.
-func (ctrl *ScanOutDCController) SetSyncService(syncSvc syncsvc.SyncService) {
-	ctrl.syncSvc = syncSvc
+// SetAppsScriptClient injects AppsScriptClient for Google Sheets sync
+func (ctrl *ScanOutDCController) SetAppsScriptClient(client syncsvc.AppsScriptClient) {
+	ctrl.appsScriptClient = client
 }
 
 func (ctrl *ScanOutDCController) List(c *gin.Context) {
@@ -60,9 +62,24 @@ func (ctrl *ScanOutDCController) Create(c *gin.Context) {
 		utils.InternalError(c, err)
 		return
 	}
-	if ctrl.syncSvc != nil && ctrl.syncSvc.IsConfigured() {
-		go ctrl.syncSvc.SyncAfterCRUD("scan_out_dcs", syncsvc.OpCreate, &body)
+	
+	// Async sync to Google Sheets
+	if ctrl.appsScriptClient != nil {
+		go func() {
+			defer func() {
+				if r := recover(); r != nil {
+					log.Printf("[SYNC] panic recovered in CREATE Scan Out: %v", r)
+				}
+			}()
+			data := syncsvc.EntityToMap(&body)
+			if err := ctrl.appsScriptClient.CreateRow(context.Background(), "Scan Out", data); err != nil {
+				log.Printf("[SYNC] failed CREATE Scan Out: %v", err)
+			} else {
+				log.Printf("[SYNC] CREATE Scan Out success (ID=%d)", body.ID)
+			}
+		}()
 	}
+	
 	utils.Created(c, body)
 }
 
@@ -83,9 +100,8 @@ func (ctrl *ScanOutDCController) Update(c *gin.Context) {
 		utils.InternalError(c, err)
 		return
 	}
-	if ctrl.syncSvc != nil && ctrl.syncSvc.IsConfigured() {
-		go ctrl.syncSvc.SyncAfterCRUD("scan_out_dcs", syncsvc.OpUpdate, existing)
-	}
+	// Note: UPDATE tidak sync ke Spreadsheet sesuai requirement
+	// Spreadsheet adalah arsip operasional, hanya CREATE yang di-sync
 	utils.OK(c, existing)
 }
 
@@ -96,8 +112,7 @@ func (ctrl *ScanOutDCController) Delete(c *gin.Context) {
 		utils.InternalError(c, err)
 		return
 	}
-	if ctrl.syncSvc != nil && ctrl.syncSvc.IsConfigured() {
-		go ctrl.syncSvc.SyncAfterCRUD("scan_out_dcs", syncsvc.OpDelete, &models.ScanOutDC{})
-	}
+	// Note: DELETE tidak sync ke Spreadsheet sesuai requirement
+	// Spreadsheet adalah arsip operasional
 	utils.OK(c, gin.H{"message": "Data berhasil dihapus"})
 }

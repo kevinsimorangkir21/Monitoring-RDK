@@ -1,6 +1,8 @@
 package controllers
 
 import (
+	"context"
+	"log"
 	"strconv"
 
 	"github.com/VYN2/Auth_Service/internal/syncsvc"
@@ -11,17 +13,17 @@ import (
 )
 
 type ReportDailyTransportController struct {
-	svc     services.ReportDailyTransportService
-	syncSvc syncsvc.SyncService
+	svc              services.ReportDailyTransportService
+	appsScriptClient syncsvc.AppsScriptClient
 }
 
 func NewReportDailyTransportController(svc services.ReportDailyTransportService) *ReportDailyTransportController {
 	return &ReportDailyTransportController{svc: svc}
 }
 
-// SetSyncService attaches an optional SyncService for async sheet sync.
-func (ctrl *ReportDailyTransportController) SetSyncService(syncSvc syncsvc.SyncService) {
-	ctrl.syncSvc = syncSvc
+// SetAppsScriptClient injects AppsScriptClient for Google Sheets sync
+func (ctrl *ReportDailyTransportController) SetAppsScriptClient(client syncsvc.AppsScriptClient) {
+	ctrl.appsScriptClient = client
 }
 
 func (ctrl *ReportDailyTransportController) List(c *gin.Context) {
@@ -60,9 +62,24 @@ func (ctrl *ReportDailyTransportController) Create(c *gin.Context) {
 		utils.InternalError(c, err)
 		return
 	}
-	if ctrl.syncSvc != nil && ctrl.syncSvc.IsConfigured() {
-		go ctrl.syncSvc.SyncAfterCRUD("report_daily_transports", syncsvc.OpCreate, &body)
+	
+	// Async sync to Google Sheets
+	if ctrl.appsScriptClient != nil {
+		go func() {
+			defer func() {
+				if r := recover(); r != nil {
+					log.Printf("[SYNC] panic recovered in CREATE Daily: %v", r)
+				}
+			}()
+			data := syncsvc.EntityToMap(&body)
+			if err := ctrl.appsScriptClient.CreateRow(context.Background(), "Daily", data); err != nil {
+				log.Printf("[SYNC] failed CREATE Daily: %v", err)
+			} else {
+				log.Printf("[SYNC] CREATE Daily success (ID=%d)", body.ID)
+			}
+		}()
 	}
+	
 	utils.Created(c, body)
 }
 
@@ -83,9 +100,8 @@ func (ctrl *ReportDailyTransportController) Update(c *gin.Context) {
 		utils.InternalError(c, err)
 		return
 	}
-	if ctrl.syncSvc != nil && ctrl.syncSvc.IsConfigured() {
-		go ctrl.syncSvc.SyncAfterCRUD("report_daily_transports", syncsvc.OpUpdate, existing)
-	}
+	// Note: UPDATE tidak sync ke Spreadsheet sesuai requirement
+	// Spreadsheet adalah arsip operasional, hanya CREATE yang di-sync
 	utils.OK(c, existing)
 }
 
@@ -96,8 +112,7 @@ func (ctrl *ReportDailyTransportController) Delete(c *gin.Context) {
 		utils.InternalError(c, err)
 		return
 	}
-	if ctrl.syncSvc != nil && ctrl.syncSvc.IsConfigured() {
-		go ctrl.syncSvc.SyncAfterCRUD("report_daily_transports", syncsvc.OpDelete, &models.ReportDailyTransport{})
-	}
+	// Note: DELETE tidak sync ke Spreadsheet sesuai requirement
+	// Spreadsheet adalah arsip operasional
 	utils.OK(c, gin.H{"message": "Data berhasil dihapus"})
 }

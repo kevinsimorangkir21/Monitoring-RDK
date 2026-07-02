@@ -1,6 +1,9 @@
 package controllers
 
 import (
+	"context"
+	"log"
+
 	"github.com/VYN2/Auth_Service/internal/syncsvc"
 	"github.com/VYN2/Auth_Service/models"
 	"github.com/VYN2/Auth_Service/services"
@@ -9,16 +12,16 @@ import (
 )
 
 type OutboundController struct {
-	svc     services.OutboundService
-	syncSvc syncsvc.SyncService
+	svc              services.OutboundService
+	appsScriptClient syncsvc.AppsScriptClient
 }
 
 func NewOutboundController(svc services.OutboundService) *OutboundController {
 	return &OutboundController{svc: svc}
 }
 
-func (ctrl *OutboundController) SetSyncService(syncSvc syncsvc.SyncService) {
-	ctrl.syncSvc = syncSvc
+func (ctrl *OutboundController) SetAppsScriptClient(client syncsvc.AppsScriptClient) {
+	ctrl.appsScriptClient = client
 }
 
 func (ctrl *OutboundController) List(c *gin.Context) {
@@ -57,9 +60,24 @@ func (ctrl *OutboundController) Create(c *gin.Context) {
 		utils.InternalError(c, err)
 		return
 	}
-	if ctrl.syncSvc != nil && ctrl.syncSvc.IsConfigured() {
-		go ctrl.syncSvc.SyncAfterCRUD("outbounds", syncsvc.OpCreate, &body)
+	
+	// Async sync to Google Sheets
+	if ctrl.appsScriptClient != nil {
+		go func() {
+			defer func() {
+				if r := recover(); r != nil {
+					log.Printf("[SYNC] panic recovered in CREATE OUT: %v", r)
+				}
+			}()
+			data := syncsvc.EntityToMap(&body)
+			if err := ctrl.appsScriptClient.CreateRow(context.Background(), "OUT", data); err != nil {
+				log.Printf("[SYNC] failed CREATE OUT: %v", err)
+			} else {
+				log.Printf("[SYNC] CREATE OUT success (ID=%d)", body.ID)
+			}
+		}()
 	}
+	
 	utils.Created(c, body)
 }
 
@@ -83,9 +101,8 @@ func (ctrl *OutboundController) Update(c *gin.Context) {
 		utils.InternalError(c, err)
 		return
 	}
-	if ctrl.syncSvc != nil && ctrl.syncSvc.IsConfigured() {
-		go ctrl.syncSvc.SyncAfterCRUD("outbounds", syncsvc.OpUpdate, existing)
-	}
+	// Note: UPDATE tidak sync ke Spreadsheet sesuai requirement
+	// Spreadsheet adalah arsip operasional, hanya CREATE yang di-sync
 	utils.OK(c, existing)
 }
 
@@ -99,8 +116,7 @@ func (ctrl *OutboundController) Delete(c *gin.Context) {
 		utils.InternalError(c, err)
 		return
 	}
-	if ctrl.syncSvc != nil && ctrl.syncSvc.IsConfigured() {
-		go ctrl.syncSvc.SyncAfterCRUD("outbounds", syncsvc.OpDelete, &models.Outbound{})
-	}
+	// Note: DELETE tidak sync ke Spreadsheet sesuai requirement
+	// Spreadsheet adalah arsip operasional
 	utils.OK(c, gin.H{"message": "Data berhasil dihapus"})
 }

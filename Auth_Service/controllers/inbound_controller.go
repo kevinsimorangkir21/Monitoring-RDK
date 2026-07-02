@@ -1,6 +1,8 @@
 package controllers
 
 import (
+	"context"
+	"log"
 	"strconv"
 
 	"github.com/VYN2/Auth_Service/dto"
@@ -12,17 +14,17 @@ import (
 )
 
 type InboundController struct {
-	svc     services.InboundService
-	syncSvc syncsvc.SyncService // nil-safe: sync is optional
+	svc              services.InboundService
+	appsScriptClient syncsvc.AppsScriptClient
 }
 
 func NewInboundController(svc services.InboundService) *InboundController {
 	return &InboundController{svc: svc}
 }
 
-// SetSyncService attaches an optional SyncService for async sheet sync after CRUD.
-func (ctrl *InboundController) SetSyncService(syncSvc syncsvc.SyncService) {
-	ctrl.syncSvc = syncSvc
+// SetAppsScriptClient injects AppsScriptClient for Google Sheets sync
+func (ctrl *InboundController) SetAppsScriptClient(client syncsvc.AppsScriptClient) {
+	ctrl.appsScriptClient = client
 }
 
 func (ctrl *InboundController) List(c *gin.Context) {
@@ -82,9 +84,24 @@ func (ctrl *InboundController) Create(c *gin.Context) {
 		utils.InternalError(c, err)
 		return
 	}
-	if ctrl.syncSvc != nil && ctrl.syncSvc.IsConfigured() {
-		go ctrl.syncSvc.SyncAfterCRUD("inbounds", syncsvc.OpCreate, m)
+	
+	// Async sync to Google Sheets
+	if ctrl.appsScriptClient != nil {
+		go func() {
+			defer func() {
+				if r := recover(); r != nil {
+					log.Printf("[SYNC] panic recovered in CREATE IN: %v", r)
+				}
+			}()
+			data := syncsvc.EntityToMap(m)
+			if err := ctrl.appsScriptClient.CreateRow(context.Background(), "IN", data); err != nil {
+				log.Printf("[SYNC] failed CREATE IN: %v", err)
+			} else {
+				log.Printf("[SYNC] CREATE IN success (ID=%d)", m.ID)
+			}
+		}()
 	}
+	
 	utils.Created(c, m)
 }
 
@@ -137,9 +154,8 @@ func (ctrl *InboundController) Update(c *gin.Context) {
 		utils.InternalError(c, err)
 		return
 	}
-	if ctrl.syncSvc != nil && ctrl.syncSvc.IsConfigured() {
-		go ctrl.syncSvc.SyncAfterCRUD("inbounds", syncsvc.OpUpdate, existing)
-	}
+	// Note: UPDATE tidak sync ke Spreadsheet sesuai requirement
+	// Spreadsheet adalah arsip operasional, hanya CREATE yang di-sync
 	utils.OK(c, existing)
 }
 
@@ -154,8 +170,7 @@ func (ctrl *InboundController) Delete(c *gin.Context) {
 		utils.InternalError(c, err)
 		return
 	}
-	if ctrl.syncSvc != nil && ctrl.syncSvc.IsConfigured() {
-		go ctrl.syncSvc.SyncAfterCRUD("inbounds", syncsvc.OpDelete, &models.Inbound{})
-	}
+	// Note: DELETE tidak sync ke Spreadsheet sesuai requirement
+	// Spreadsheet adalah arsip operasional
 	utils.OK(c, gin.H{"message": "Data berhasil dihapus"})
 }

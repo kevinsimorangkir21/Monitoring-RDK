@@ -22,8 +22,8 @@ type Deps struct {
 	SetoranCtrl         *controllers.SetoranController
 	WoWtCtrl            *controllers.WoWtController
 	UserRepo            repositories.UserRepository
-	// Google Sheets Sync — additive, nil-safe in Degraded Mode
-	SyncCtrl *controllers.SyncController
+	// Google Sheets Webhook
+	WebhookCtrl *controllers.WebhookController
 }
 
 // Register mounts all routes on the Gin engine.
@@ -112,20 +112,10 @@ func Register(r *gin.Engine, d Deps) {
 		d.WoWtCtrl.List, d.WoWtCtrl.GetByID,
 		d.WoWtCtrl.Create, d.WoWtCtrl.Update, d.WoWtCtrl.Delete)
 
-	// ── Google Sheets Sync routes (nil-safe — skipped in Degraded Mode) ───────
-	if d.SyncCtrl != nil {
-		// POST /api/sync/google — no JWT (validated by webhook secret in body)
-		api.POST("/sync/google", d.SyncCtrl.WebhookSync)
-
-		// JWT-protected sync endpoints
-		protected.POST("/import/google", d.SyncCtrl.ImportGoogle)
-		protected.POST("/export/google", d.SyncCtrl.ExportGoogle)
-
-		// SSE endpoint — JWT via query param ?token= (EventSource limitation)
-		// Uses a special middleware that checks query param first, then header
-		sseGroup := api.Group("/sse")
-		sseGroup.Use(middleware.AuthMiddlewareSSE(d.UserRepo))
-		sseGroup.GET("", d.SyncCtrl.SSEStream)
+	// ── Google Sheets Webhook (Spreadsheet → MySQL sync) ─────────────────────
+	if d.WebhookCtrl != nil {
+		// POST /api/webhook/google — validated by X-Webhook-Secret header
+		api.POST("/webhook/google", d.WebhookCtrl.HandleGoogleSheetEdit)
 	}
 }
 

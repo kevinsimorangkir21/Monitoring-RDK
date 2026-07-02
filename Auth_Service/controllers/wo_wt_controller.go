@@ -1,6 +1,8 @@
 package controllers
 
 import (
+	"context"
+	"log"
 	"strconv"
 
 	"github.com/VYN2/Auth_Service/internal/syncsvc"
@@ -11,17 +13,17 @@ import (
 )
 
 type WoWtController struct {
-	svc     services.WoWtService
-	syncSvc syncsvc.SyncService
+	svc              services.WoWtService
+	appsScriptClient syncsvc.AppsScriptClient
 }
 
 func NewWoWtController(svc services.WoWtService) *WoWtController {
 	return &WoWtController{svc: svc}
 }
 
-// SetSyncService attaches an optional SyncService for async sheet sync.
-func (ctrl *WoWtController) SetSyncService(syncSvc syncsvc.SyncService) {
-	ctrl.syncSvc = syncSvc
+// SetAppsScriptClient injects AppsScriptClient for Google Sheets sync
+func (ctrl *WoWtController) SetAppsScriptClient(client syncsvc.AppsScriptClient) {
+	ctrl.appsScriptClient = client
 }
 
 func (ctrl *WoWtController) List(c *gin.Context) {
@@ -60,9 +62,24 @@ func (ctrl *WoWtController) Create(c *gin.Context) {
 		utils.InternalError(c, err)
 		return
 	}
-	if ctrl.syncSvc != nil && ctrl.syncSvc.IsConfigured() {
-		go ctrl.syncSvc.SyncAfterCRUD("wo_wts", syncsvc.OpCreate, &body)
+	
+	// Async sync to Google Sheets
+	if ctrl.appsScriptClient != nil {
+		go func() {
+			defer func() {
+				if r := recover(); r != nil {
+					log.Printf("[SYNC] panic recovered in CREATE WO-WT: %v", r)
+				}
+			}()
+			data := syncsvc.EntityToMap(&body)
+			if err := ctrl.appsScriptClient.CreateRow(context.Background(), "WO-WT", data); err != nil {
+				log.Printf("[SYNC] failed CREATE WO-WT: %v", err)
+			} else {
+				log.Printf("[SYNC] CREATE WO-WT success (ID=%d)", body.ID)
+			}
+		}()
 	}
+	
 	utils.Created(c, body)
 }
 
@@ -83,9 +100,8 @@ func (ctrl *WoWtController) Update(c *gin.Context) {
 		utils.InternalError(c, err)
 		return
 	}
-	if ctrl.syncSvc != nil && ctrl.syncSvc.IsConfigured() {
-		go ctrl.syncSvc.SyncAfterCRUD("wo_wts", syncsvc.OpUpdate, existing)
-	}
+	// Note: UPDATE tidak sync ke Spreadsheet sesuai requirement
+	// Spreadsheet adalah arsip operasional, hanya CREATE yang di-sync
 	utils.OK(c, existing)
 }
 
@@ -96,8 +112,7 @@ func (ctrl *WoWtController) Delete(c *gin.Context) {
 		utils.InternalError(c, err)
 		return
 	}
-	if ctrl.syncSvc != nil && ctrl.syncSvc.IsConfigured() {
-		go ctrl.syncSvc.SyncAfterCRUD("wo_wts", syncsvc.OpDelete, &models.WoWt{})
-	}
+	// Note: DELETE tidak sync ke Spreadsheet sesuai requirement
+	// Spreadsheet adalah arsip operasional
 	utils.OK(c, gin.H{"message": "Data berhasil dihapus"})
 }

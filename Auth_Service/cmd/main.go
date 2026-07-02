@@ -96,22 +96,31 @@ func main() {
 		UserRepo:            userRepo,
 	}
 
-	// Wire Google Sheets sync (non-blocking — Degraded Mode if unconfigured)
-	var googleClient syncsvc.GoogleClient
-	gc, gcErr := syncsvc.NewGoogleClient(config.AppConfig)
-	if gcErr != nil {
-		log.Printf("[syncsvc] Google Sheets client init failed (Degraded Mode): %v", gcErr)
-	} else {
-		googleClient = gc
-		log.Println("[syncsvc] Google Sheets client initialized")
-	}
+	// ── 9. Initialize Apps Script Client (simple HTTP client) ────────────────
+	appsScriptClient := syncsvc.NewAppsScriptClient(config.AppConfig.GoogleAppsScriptURL)
 
-	sseHub := syncsvc.NewSSEHub()
-	sheetMapper := syncsvc.NewSheetMapper()
-	sheetSvc := syncsvc.NewSheetService(googleClient)
-	conflictResolver := syncsvc.NewConflictResolver()
-	syncSvc := syncsvc.NewSyncService(googleClient, sheetSvc, sheetMapper, conflictResolver, db, sseHub, config.AppConfig)
-	deps.SyncCtrl = controllers.NewSyncController(syncSvc, sseHub)
+	// Inject AppsScriptClient into all CRUD controllers for CREATE sync
+	deps.InboundCtrl.SetAppsScriptClient(appsScriptClient)
+	deps.OutboundCtrl.SetAppsScriptClient(appsScriptClient)
+	deps.ReportDailyCtrl.SetAppsScriptClient(appsScriptClient)
+	deps.ScanOutDCCtrl.SetAppsScriptClient(appsScriptClient)
+	deps.ClaimVendorCtrl.SetAppsScriptClient(appsScriptClient)
+	deps.GantunganFakturCtrl.SetAppsScriptClient(appsScriptClient)
+	deps.SetoranCtrl.SetAppsScriptClient(appsScriptClient)
+	deps.WoWtCtrl.SetAppsScriptClient(appsScriptClient)
+
+	// ── 10. Initialize WebhookController (handles Spreadsheet→MySQL sync) ────
+	deps.WebhookCtrl = controllers.NewWebhookController(
+		config.AppConfig,
+		inboundSvc,
+		outboundSvc,
+		reportDailySvc,
+		scanOutDCSvc,
+		claimVendorSvc,
+		gantunganSvc,
+		setoranSvc,
+		woWtSvc,
+	)
 
 	gin.SetMode(gin.ReleaseMode)
 	r := gin.Default()

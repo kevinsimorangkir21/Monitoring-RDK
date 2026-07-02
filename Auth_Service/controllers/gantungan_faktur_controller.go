@@ -1,6 +1,8 @@
 package controllers
 
 import (
+	"context"
+	"log"
 	"strconv"
 
 	"github.com/VYN2/Auth_Service/internal/syncsvc"
@@ -11,17 +13,17 @@ import (
 )
 
 type GantunganFakturController struct {
-	svc     services.GantunganFakturService
-	syncSvc syncsvc.SyncService
+	svc              services.GantunganFakturService
+	appsScriptClient syncsvc.AppsScriptClient
 }
 
 func NewGantunganFakturController(svc services.GantunganFakturService) *GantunganFakturController {
 	return &GantunganFakturController{svc: svc}
 }
 
-// SetSyncService attaches an optional SyncService for async sheet sync.
-func (ctrl *GantunganFakturController) SetSyncService(syncSvc syncsvc.SyncService) {
-	ctrl.syncSvc = syncSvc
+// SetAppsScriptClient injects AppsScriptClient for Google Sheets sync
+func (ctrl *GantunganFakturController) SetAppsScriptClient(client syncsvc.AppsScriptClient) {
+	ctrl.appsScriptClient = client
 }
 
 func (ctrl *GantunganFakturController) List(c *gin.Context) {
@@ -69,9 +71,24 @@ func (ctrl *GantunganFakturController) Create(c *gin.Context) {
 		utils.InternalError(c, err)
 		return
 	}
-	if ctrl.syncSvc != nil && ctrl.syncSvc.IsConfigured() {
-		go ctrl.syncSvc.SyncAfterCRUD("gantungan_fakturs", syncsvc.OpCreate, &body)
+	
+	// Async sync to Google Sheets
+	if ctrl.appsScriptClient != nil {
+		go func() {
+			defer func() {
+				if r := recover(); r != nil {
+					log.Printf("[SYNC] panic recovered in CREATE Faktur: %v", r)
+				}
+			}()
+			data := syncsvc.EntityToMap(&body)
+			if err := ctrl.appsScriptClient.CreateRow(context.Background(), "Faktur", data); err != nil {
+				log.Printf("[SYNC] failed CREATE Faktur: %v", err)
+			} else {
+				log.Printf("[SYNC] CREATE Faktur success (ID=%d)", body.ID)
+			}
+		}()
 	}
+	
 	utils.Created(c, body)
 }
 
@@ -92,9 +109,8 @@ func (ctrl *GantunganFakturController) Update(c *gin.Context) {
 		utils.InternalError(c, err)
 		return
 	}
-	if ctrl.syncSvc != nil && ctrl.syncSvc.IsConfigured() {
-		go ctrl.syncSvc.SyncAfterCRUD("gantungan_fakturs", syncsvc.OpUpdate, existing)
-	}
+	// Note: UPDATE tidak sync ke Spreadsheet sesuai requirement
+	// Spreadsheet adalah arsip operasional, hanya CREATE yang di-sync
 	utils.OK(c, existing)
 }
 
@@ -105,8 +121,7 @@ func (ctrl *GantunganFakturController) Delete(c *gin.Context) {
 		utils.InternalError(c, err)
 		return
 	}
-	if ctrl.syncSvc != nil && ctrl.syncSvc.IsConfigured() {
-		go ctrl.syncSvc.SyncAfterCRUD("gantungan_fakturs", syncsvc.OpDelete, &models.GantunganFaktur{})
-	}
+	// Note: DELETE tidak sync ke Spreadsheet sesuai requirement
+	// Spreadsheet adalah arsip operasional
 	utils.OK(c, gin.H{"message": "Data berhasil dihapus"})
 }
