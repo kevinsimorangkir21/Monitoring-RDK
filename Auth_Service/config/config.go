@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strings"
 )
 
 // Config holds all application configuration loaded from environment variables.
@@ -17,12 +18,21 @@ type Config struct {
 	JWTSecret   string
 	JWTExpire   string
 	CORSOrigins string
+
+	// Google Sheets Sync — field baru (additive, field lama tidak berubah)
+	GoogleProjectID     string // GOOGLE_PROJECT_ID (opsional, warning saja)
+	GoogleClientEmail   string // GOOGLE_CLIENT_EMAIL (wajib untuk mode aktif)
+	GooglePrivateKey    string // GOOGLE_PRIVATE_KEY (wajib untuk mode aktif, \n dinormalisasi)
+	GoogleSpreadsheetID string // GOOGLE_SPREADSHEET_ID (wajib untuk mode aktif)
+	GoogleWebhookSecret string // GOOGLE_WEBHOOK_SECRET (opsional, warning saja)
 }
 
 // AppConfig is the global config instance, populated by Load().
 var AppConfig *Config
 
 // Load reads all required environment variables and panics if any are missing.
+// Google-related env vars are optional — missing vars log a warning and the backend
+// starts in Degraded Mode (sync endpoints return 503, CRUD endpoints remain normal).
 func Load() {
 	cfg := &Config{
 		Port:        getEnv("PORT", "8080"),
@@ -35,6 +45,32 @@ func Load() {
 		JWTExpire:   getEnv("JWT_EXPIRE", "24h"),
 		CORSOrigins: getEnv("CORS_ORIGINS", "http://localhost:3000"),
 	}
+
+	// Google Sheets Sync — semua bersifat opsional; jika kosong, backend berjalan
+	// dalam Degraded Mode dan endpoint sync mengembalikan HTTP 503.
+	cfg.GoogleProjectID = os.Getenv("GOOGLE_PROJECT_ID")
+	cfg.GoogleClientEmail = os.Getenv("GOOGLE_CLIENT_EMAIL")
+	// Normalisasi GOOGLE_PRIVATE_KEY: ganti literal \n (dua karakter) dengan newline aktual (0x0A)
+	cfg.GooglePrivateKey = strings.ReplaceAll(os.Getenv("GOOGLE_PRIVATE_KEY"), `\n`, "\n")
+	cfg.GoogleSpreadsheetID = os.Getenv("GOOGLE_SPREADSHEET_ID")
+	cfg.GoogleWebhookSecret = os.Getenv("GOOGLE_WEBHOOK_SECRET")
+
+	if cfg.GoogleProjectID == "" {
+		log.Println("[config] warning: GOOGLE_PROJECT_ID is not set — Google Sheets sync will run in Degraded Mode")
+	}
+	if cfg.GoogleClientEmail == "" {
+		log.Println("[config] warning: GOOGLE_CLIENT_EMAIL is not set — Google Sheets sync will run in Degraded Mode")
+	}
+	if cfg.GooglePrivateKey == "" {
+		log.Println("[config] warning: GOOGLE_PRIVATE_KEY is not set — Google Sheets sync will run in Degraded Mode")
+	}
+	if cfg.GoogleSpreadsheetID == "" {
+		log.Println("[config] warning: GOOGLE_SPREADSHEET_ID is not set — Google Sheets sync will run in Degraded Mode")
+	}
+	if cfg.GoogleWebhookSecret == "" {
+		log.Println("[config] warning: GOOGLE_WEBHOOK_SECRET is not set — webhook endpoint will return 503")
+	}
+
 	AppConfig = cfg
 }
 

@@ -15,9 +15,8 @@ import (
 // DB is the global GORM database instance.
 var DB *gorm.DB
 
-// Connect opens a GORM connection to a local MySQL instance using the loaded
-// config. It retries up to maxRetries times before printing a human-readable
-// error and terminating, so the developer knows exactly what to fix.
+// Connect opens a GORM connection to MySQL and runs AutoMigrate for all models.
+// It retries up to maxRetries times before fatally exiting.
 func Connect() {
 	cfg := config.AppConfig
 
@@ -41,7 +40,6 @@ func Connect() {
 		if err == nil {
 			break
 		}
-
 		if attempt < maxRetries {
 			log.Printf("[database] connection attempt %d/%d failed, retrying in %v...", attempt, maxRetries, retryDelay)
 			time.Sleep(retryDelay)
@@ -58,15 +56,25 @@ func Connect() {
 		fmt.Printf("  - Database '%s' exists.\n", cfg.DBName)
 		fmt.Println("  - DB_USER and DB_PASS are correct in .env")
 		fmt.Println()
-		fmt.Println("  To create the database, run:")
 		fmt.Printf("  CREATE DATABASE %s CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;\n", cfg.DBName)
 		fmt.Println()
 		log.Fatalf("[database] could not connect after %d attempts: %v", maxRetries, err)
 	}
 
-	// Run schema migrations — safe to run on every startup; GORM only adds
-	// missing columns/tables and never drops existing data.
-	if err := db.AutoMigrate(&models.User{}); err != nil {
+	// AutoMigrate is safe to run on every startup — it only adds missing
+	// columns/tables and never drops data.
+	if err := db.AutoMigrate(
+		&models.User{},
+		&models.ActivityLog{},
+		&models.Inbound{},
+		&models.Outbound{},
+		&models.ReportDailyTransport{},
+		&models.ScanOutDC{},
+		&models.ClaimVendor{},
+		&models.GantunganFaktur{},
+		&models.Setoran{},
+		&models.WoWt{},
+	); err != nil {
 		log.Fatalf("[database] auto-migration failed: %v", err)
 	}
 

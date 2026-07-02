@@ -54,3 +54,53 @@ func AuthMiddleware(userRepo repositories.UserRepository) gin.HandlerFunc {
 		c.Next()
 	}
 }
+
+// AuthMiddlewareSSE is a variant of AuthMiddleware that also accepts a JWT token
+// from the ?token= query parameter. This is required for GET /api/sse because
+// the browser's EventSource API does not support custom request headers.
+func AuthMiddlewareSSE(userRepo repositories.UserRepository) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		if c.Request.Method == "OPTIONS" {
+			c.Next()
+			return
+		}
+
+		// Try Authorization header first, then fall back to ?token= query param
+		tokenStr := ""
+		authHeader := c.GetHeader("Authorization")
+		if authHeader != "" && strings.HasPrefix(authHeader, "Bearer ") {
+			tokenStr = strings.TrimPrefix(authHeader, "Bearer ")
+		} else if q := c.Query("token"); q != "" {
+			tokenStr = q
+		}
+
+		if tokenStr == "" {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
+				"success": false,
+				"message": "Token tidak valid atau sudah kadaluarsa",
+			})
+			return
+		}
+
+		claims, err := utils.ParseToken(tokenStr)
+		if err != nil {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
+				"success": false,
+				"message": "Token tidak valid atau sudah kadaluarsa",
+			})
+			return
+		}
+
+		user, err := userRepo.FindByID(claims.ID)
+		if err != nil || user.Status != "ACTIVE" {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
+				"success": false,
+				"message": "Akun tidak aktif atau tidak ditemukan",
+			})
+			return
+		}
+
+		c.Set("claims", claims)
+		c.Next()
+	}
+}
